@@ -130,3 +130,110 @@ h1, h2, h3, h4, h5, h6 {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(100, 116, 139, 0.8);
 }
+
+/* ═══════════════════════════════════════════
+   MOBILE RESPONSIVE ADDITIONS
+   ═══════════════════════════════════════════ */
+
+/* Hamburger toggle button – hidden on desktop */
+.nav-hamburger {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+.nav-hamburger:hover { background: rgba(255,255,255,0.1); }
+.nav-hamburger span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: #fff;
+    margin: 5px 0;
+    border-radius: 2px;
+    transition: all 0.3s;
+}
+/* Burger for light navbars */
+.nav-hamburger.dark span { background: #475569; }
+
+/* Mobile drawer nav links */
+.nav-links-mobile {
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 16px 16px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    animation: slideFadeUp 0.25s ease;
+}
+.nav-links-mobile button {
+    width: 100%;
+    text-align: left;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+/* Desktop: show inline links, hide hamburger */
+@media (min-width: 768px) {
+    .nav-desktop-links { display: flex !important; }
+    .nav-hamburger { display: none !important; }
+    .nav-links-mobile { display: none !important; }
+}
+
+/* Mobile: hide desktop links, show hamburger */
+@media (max-width: 767px) {
+    .nav-desktop-links { display: none !important; }
+    .nav-hamburger { display: flex !important; flex-direction: column; justify-content: center; }
+
+    /* Prevent long filter tab rows from breaking layout */
+    .filter-tab-row {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+        scrollbar-width: none;
+    }
+    .filter-tab-row::-webkit-scrollbar { display: none; }
+    .filter-tab-row button { flex-shrink: 0; white-space: nowrap; }
+
+    /* Admin tables – horizontal scroll on mobile */
+    .admin-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .admin-table-wrap table { min-width: 520px; }
+
+    /* Map modal – full-screen on mobile */
+    #mapPickerModal > div {
+        max-width: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Back buttons – reflow from absolute to static */
+    .back-btn-mobile {
+        position: static !important;
+        display: inline-flex;
+        margin-bottom: 12px;
+    }
+
+    /* Citizen signup form scrollable area – shorter on small screens */
+    #citizenSignupForm { height: auto !important; max-height: 65vh; }
+    #officialSignupForm { height: auto !important; max-height: 65vh; }
+
+    /* Popup notifications – full width on mobile */
+    #popupContainer {
+        top: auto !important;
+        bottom: 16px !important;
+        right: 8px !important;
+        left: 8px !important;
+    }
+
+    /* Profile page header – stack on mobile */
+    .profile-header-row { flex-direction: column !important; gap: 12px; }
+    .profile-header-row h2 { font-size: 1.6rem !important; }
+
+    /* Card grids fallback */
+    .glass-card { border-radius: 16px !important; }
+}

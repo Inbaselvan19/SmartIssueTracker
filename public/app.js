@@ -469,4 +469,25 @@
         document.getElementById('proofImage').addEventListener('change', function (e) { if (e.target.files[0]) { document.getElementById('proofPreviewImg').src = URL.createObjectURL(e.target.files[0]); document.getElementById('proofImagePreview').classList.remove('hidden'); } });
         function clearProofImage() { document.getElementById('proofImage').value = ''; document.getElementById('proofImagePreview').classList.add('hidden'); }
 
+        // ── Mobile Navigation Helpers ────────────────────────────────────
+        function toggleMobileNav(id) {
+            const nav = document.getElementById(id);
+            if (!nav) return;
+            const isOpen = nav.style.display === 'flex';
+            nav.style.display = isOpen ? 'none' : 'flex';
+        }
+        function closeMobileNav(id) {
+            const nav = document.getElementById(id);
+            if (nav) nav.style.display = 'none';
+        }
+        // Close mobile nav when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('nav')) {
+                ['citizenMobileNav', 'officialMobileNav', 'adminMobileNav'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', () => { initializeSampleData(); showUserTypeSelection(); });

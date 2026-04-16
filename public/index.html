@@ -66,9 +66,9 @@
         </div>
     </div>
 
-    <div id="citizenLogin" class="min-h-screen flex items-center justify-center p-4 hidden relative">
+    <div id="citizenLogin" class="min-h-screen flex flex-col items-center justify-center p-4 hidden relative">
         <button onclick="showUserTypeSelection()"
-            class="absolute top-8 left-8 bg-white p-3 rounded-full shadow-md text-slate-500 hover:text-blue-600 transition"><svg
+            class="back-btn-mobile absolute top-8 left-8 bg-white p-3 rounded-full shadow-md text-slate-500 hover:text-blue-600 transition"><svg
                 class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
             </svg></button>
@@ -131,9 +131,9 @@
         </div>
     </div>
 
-    <div id="officialLogin" class="min-h-screen flex items-center justify-center p-4 hidden relative">
+    <div id="officialLogin" class="min-h-screen flex flex-col items-center justify-center p-4 hidden relative">
         <button onclick="showUserTypeSelection()"
-            class="absolute top-8 left-8 bg-white p-3 rounded-full shadow-md text-slate-500 hover:text-emerald-600 transition"><svg
+            class="back-btn-mobile absolute top-8 left-8 bg-white p-3 rounded-full shadow-md text-slate-500 hover:text-emerald-600 transition"><svg
                 class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
             </svg></button>
@@ -214,9 +214,9 @@
         </div>
     </div>
 
-    <div id="adminLogin" class="min-h-screen flex items-center justify-center p-4 hidden relative">
+    <div id="adminLogin" class="min-h-screen flex flex-col items-center justify-center p-4 hidden relative">
         <button onclick="showUserTypeSelection()"
-            class="absolute top-8 left-8 bg-white p-3 rounded-full shadow-md text-slate-500 hover:text-purple-600 transition"><svg
+            class="back-btn-mobile absolute top-8 left-8 bg-white p-3 rounded-full shadow-md text-slate-500 hover:text-purple-600 transition"><svg
                 class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
             </svg></button>
@@ -246,27 +246,33 @@
 
     <div id="citizenDashboard" class="min-h-screen hidden">
         <nav class="bg-white/80 backdrop-blur-md shadow-sm border-b sticky top-0 z-40">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16">
-                <div class="flex items-center">
-                    <h1 id="citizenHeaderName" class="text-xl font-bold text-blue-700 tracking-tight">Citizen Portal
-                    </h1>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <button onclick="showCitizenSection('problemUpload')"
-                        class="text-slate-600 hover:text-blue-600 font-medium px-3 py-2 rounded-lg hover:bg-blue-50 transition">Dashboard</button>
-                    <button onclick="showCitizenSection('profile')"
-                        class="text-slate-600 hover:text-blue-600 font-medium px-3 py-2 rounded-lg hover:bg-blue-50 transition">Profile</button>
-                    <div class="h-6 w-px bg-slate-200 mx-2"></div>
-                    <button onclick="logout()"
-                        class="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition"
-                        title="Logout">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
-                            </path>
-                        </svg>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16 items-center">
+                    <div class="flex items-center">
+                        <h1 id="citizenHeaderName" class="text-xl font-bold text-blue-700 tracking-tight">Citizen Portal</h1>
+                    </div>
+                    <!-- Desktop nav -->
+                    <div class="nav-desktop-links flex items-center space-x-2">
+                        <button onclick="showCitizenSection('problemUpload')"
+                            class="text-slate-600 hover:text-blue-600 font-medium px-3 py-2 rounded-lg hover:bg-blue-50 transition">Dashboard</button>
+                        <button onclick="showCitizenSection('profile')"
+                            class="text-slate-600 hover:text-blue-600 font-medium px-3 py-2 rounded-lg hover:bg-blue-50 transition">Profile</button>
+                        <div class="h-6 w-px bg-slate-200 mx-2"></div>
+                        <button onclick="logout()" class="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition" title="Logout">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        </button>
+                    </div>
+                    <!-- Mobile hamburger -->
+                    <button class="nav-hamburger dark" onclick="toggleMobileNav('citizenMobileNav')" aria-label="Menu">
+                        <span></span><span></span><span></span>
                     </button>
                 </div>
+            </div>
+            <!-- Mobile dropdown -->
+            <div id="citizenMobileNav" class="nav-links-mobile" style="border-top:1px solid rgba(148,163,184,0.2);">
+                <button onclick="showCitizenSection('problemUpload');closeMobileNav('citizenMobileNav')" class="text-slate-700 hover:bg-blue-50 hover:text-blue-700">📊 Dashboard</button>
+                <button onclick="showCitizenSection('profile');closeMobileNav('citizenMobileNav')" class="text-slate-700 hover:bg-blue-50 hover:text-blue-700">👤 Profile</button>
+                <button onclick="logout()" class="text-red-500 hover:bg-red-50">🚪 Logout</button>
             </div>
         </nav>
 
@@ -449,28 +455,32 @@
 
     <div id="officialDashboard" class="min-h-screen hidden">
         <nav class="bg-slate-900 shadow-md sticky top-0 z-40">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16">
-                <div class="flex items-center">
-                    <div class="w-8 h-8 bg-emerald-500 rounded flex items-center justify-center mr-3"><span
-                            class="text-white font-bold">O</span></div>
-                    <h1 id="officialHeaderDept" class="text-xl font-bold text-white tracking-wide">Official Portal</h1>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <button onclick="showOfficialSection('problems')"
-                        class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-slate-800 transition">Tickets</button>
-                    <button onclick="showOfficialSection('profile')"
-                        class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-slate-800 transition">Profile</button>
-                    <div class="h-6 w-px bg-slate-700 mx-2"></div>
-                    <button onclick="logout()"
-                        class="text-red-400 hover:text-red-300 p-2 rounded-full hover:bg-slate-800 transition"
-                        title="Logout">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
-                            </path>
-                        </svg>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16 items-center">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-emerald-500 rounded flex items-center justify-center mr-3"><span class="text-white font-bold">O</span></div>
+                        <h1 id="officialHeaderDept" class="text-xl font-bold text-white tracking-wide">Official Portal</h1>
+                    </div>
+                    <!-- Desktop nav -->
+                    <div class="nav-desktop-links flex items-center space-x-2">
+                        <button onclick="showOfficialSection('problems')" class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-slate-800 transition">Tickets</button>
+                        <button onclick="showOfficialSection('profile')" class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-slate-800 transition">Profile</button>
+                        <div class="h-6 w-px bg-slate-700 mx-2"></div>
+                        <button onclick="logout()" class="text-red-400 hover:text-red-300 p-2 rounded-full hover:bg-slate-800 transition" title="Logout">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        </button>
+                    </div>
+                    <!-- Mobile hamburger -->
+                    <button class="nav-hamburger" onclick="toggleMobileNav('officialMobileNav')" aria-label="Menu">
+                        <span></span><span></span><span></span>
                     </button>
                 </div>
+            </div>
+            <!-- Mobile dropdown -->
+            <div id="officialMobileNav" class="nav-links-mobile">
+                <button onclick="showOfficialSection('problems');closeMobileNav('officialMobileNav')" class="text-slate-300 hover:bg-slate-800 hover:text-white">🎫 Tickets</button>
+                <button onclick="showOfficialSection('profile');closeMobileNav('officialMobileNav')" class="text-slate-300 hover:bg-slate-800 hover:text-white">👤 Profile</button>
+                <button onclick="logout()" class="text-red-400 hover:bg-slate-800">🚪 Logout</button>
             </div>
         </nav>
 
@@ -486,10 +496,9 @@
                 </div>
 
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
-                    <div class="flex mb-8 bg-slate-100 rounded-xl p-1 shadow-inner overflow-x-auto custom-scrollbar">
+                    <div class="filter-tab-row flex mb-8 bg-slate-100 rounded-xl p-1 shadow-inner">
                         <button onclick="filterOfficialProblems('all')" id="allProblemsTab"
-                            class="flex-1 py-2.5 px-4 rounded-lg text-sm font-bold bg-white text-slate-800 shadow">All
-                            Tickets</button>
+                            class="flex-1 py-2.5 px-4 rounded-lg text-sm font-bold bg-white text-slate-800 shadow">All Tickets</button>
                         <button onclick="filterOfficialProblems('pending')" id="pendingProblemsTab"
                             class="flex-1 py-2.5 px-4 rounded-lg text-sm font-bold text-slate-500">Pending</button>
                         <button onclick="filterOfficialProblems('progress')" id="progressProblemsTab"
@@ -579,33 +588,36 @@
 
     <div id="adminDashboard" class="min-h-screen hidden bg-slate-50">
         <nav class="bg-purple-900 shadow-md sticky top-0 z-40">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16">
-                <div class="flex items-center">
-                    <div class="w-8 h-8 bg-purple-500 rounded flex items-center justify-center mr-3"><span
-                            class="text-white font-bold">A</span></div>
-                    <h1 class="text-xl font-bold text-white tracking-wide">Super Admin Portal</h1>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <button onclick="showAdminSection('overview')"
-                        class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-purple-800 transition">Overview</button>
-                    <button onclick="showAdminSection('users')"
-                        class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-purple-800 transition">Citizens</button>
-                    <button onclick="showAdminSection('officials')"
-                        class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-purple-800 transition">Officials</button>
-                    <button onclick="showAdminSection('feedbacks')"
-                        class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-purple-800 transition">Review
-                        Feedbacks</button>
-                    <div class="h-6 w-px bg-purple-700 mx-2"></div>
-                    <button onclick="logout()"
-                        class="text-red-300 hover:text-red-200 p-2 rounded-full hover:bg-purple-800 transition"
-                        title="Logout">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
-                            </path>
-                        </svg>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16 items-center">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-purple-500 rounded flex items-center justify-center mr-3"><span class="text-white font-bold">A</span></div>
+                        <h1 class="text-xl font-bold text-white tracking-wide">Super Admin Portal</h1>
+                    </div>
+                    <!-- Desktop nav -->
+                    <div class="nav-desktop-links flex items-center space-x-2">
+                        <button onclick="showAdminSection('overview')" class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-purple-800 transition">Overview</button>
+                        <button onclick="showAdminSection('users')" class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-purple-800 transition">Citizens</button>
+                        <button onclick="showAdminSection('officials')" class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-purple-800 transition">Officials</button>
+                        <button onclick="showAdminSection('feedbacks')" class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-purple-800 transition">Feedbacks</button>
+                        <div class="h-6 w-px bg-purple-700 mx-2"></div>
+                        <button onclick="logout()" class="text-red-300 hover:text-red-200 p-2 rounded-full hover:bg-purple-800 transition" title="Logout">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        </button>
+                    </div>
+                    <!-- Mobile hamburger -->
+                    <button class="nav-hamburger" onclick="toggleMobileNav('adminMobileNav')" aria-label="Menu">
+                        <span></span><span></span><span></span>
                     </button>
                 </div>
+            </div>
+            <!-- Mobile dropdown -->
+            <div id="adminMobileNav" class="nav-links-mobile">
+                <button onclick="showAdminSection('overview');closeMobileNav('adminMobileNav')" class="text-slate-300 hover:bg-purple-800 hover:text-white">📊 Overview</button>
+                <button onclick="showAdminSection('users');closeMobileNav('adminMobileNav')" class="text-slate-300 hover:bg-purple-800 hover:text-white">👥 Citizens</button>
+                <button onclick="showAdminSection('officials');closeMobileNav('adminMobileNav')" class="text-slate-300 hover:bg-purple-800 hover:text-white">👮 Officials</button>
+                <button onclick="showAdminSection('feedbacks');closeMobileNav('adminMobileNav')" class="text-slate-300 hover:bg-purple-800 hover:text-white">💬 Feedbacks</button>
+                <button onclick="logout()" class="text-red-300 hover:bg-purple-800">🚪 Logout</button>
             </div>
         </nav>
 
@@ -634,22 +646,14 @@
 
             <div id="adminUsers" class="hidden fade-in space-y-6">
                 <h2 class="text-3xl font-extrabold text-slate-800">Manage Citizens</h2>
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="admin-table-wrap bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                     <table class="min-w-full divide-y divide-slate-200">
                         <thead class="bg-slate-50">
                             <tr>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                    ID</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                    Name</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                    Email</th>
-                                <th
-                                    class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                    Actions</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-slate-200" id="adminCitizensList"></tbody>
@@ -659,22 +663,14 @@
 
             <div id="adminOfficials" class="hidden fade-in space-y-6">
                 <h2 class="text-3xl font-extrabold text-slate-800">Manage Officials</h2>
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="admin-table-wrap bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                     <table class="min-w-full divide-y divide-slate-200">
                         <thead class="bg-slate-50">
                             <tr>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                    ID</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                    Name</th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                    Department</th>
-                                <th
-                                    class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                                    Actions</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Department</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-slate-200" id="adminOfficialsList"></tbody>
@@ -831,7 +827,7 @@
         </div>
     </div>
 
-    <div id="popupContainer" class="fixed top-4 right-4 z-50 space-y-3"></div>
+    <div id="popupContainer" class="fixed top-4 right-4 z-50 space-y-3" style="max-width: calc(100vw - 32px);"></div>
 
 
     <script src="app.js"></script>
