@@ -11,7 +11,7 @@
         let videoStream = null;
         let pendingAuthData = null;
 
-        const API_BASE = 'http://localhost:3000/api';
+        const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api';
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
             const headers = { 'Content-Type': 'application/json' };
