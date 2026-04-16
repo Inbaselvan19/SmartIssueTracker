@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Municipal Problem Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet.js (free, no API key needed) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen text-slate-800">
+
+    <div id="userTypeSelection" class="min-h-screen flex items-center justify-center p-4 relative">
+        <div class="glass-card rounded-3xl shadow-2xl p-10 w-full max-w-md fade-in border border-white">
+            <div class="text-center mb-10">
+                <div
+                    class="w-24 h-24 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg transform rotate-3 hover:rotate-6 transition duration-300">
+                    <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h3M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                        </path>
+                    </svg>
+                </div>
+                <h1 class="text-4xl font-extrabold text-slate-800 mb-3 tracking-tight">SmartConnect</h1>
+                <p class="text-slate-500 font-medium">Municipal Problem Resolution System</p>
+            </div>
+
+            <div class="space-y-4">
+                <button onclick="showLogin('citizen')"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-xl transition duration-300 transform hover:-translate-y-1 shadow-md flex items-center justify-center space-x-3 group">
+                    <svg class="w-6 h-6 group-hover:scale-110 transition" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                    <span class="text-lg">Citizen Portal</span>
+                </button>
+
+                <button onclick="showLogin('official')"
+                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-4 px-6 rounded-xl transition duration-300 transform hover:-translate-y-1 shadow-md flex items-center justify-center space-x-3 group">
+                    <svg class="w-6 h-6 group-hover:scale-110 transition" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                        </path>
+                    </svg>
+                    <span class="text-lg">Official Portal</span>
+                </button>
+
+                <button onclick="showLogin('admin')"
+                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-4 px-6 rounded-xl transition duration-300 transform hover:-translate-y-1 shadow-md flex items-center justify-center space-x-3 group">
+                    <svg class="w-6 h-6 group-hover:scale-110 transition" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4">
+                        </path>
+                    </svg>
+                    <span class="text-lg">Admin Portal</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="citizenLogin" class="min-h-screen flex items-center justify-center p-4 hidden relative">
+        <button onclick="showUserTypeSelection()"
+            class="absolute top-8 left-8 bg-white p-3 rounded-full shadow-md text-slate-500 hover:text-blue-600 transition"><svg
+                class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg></button>
+        <div class="glass-card rounded-3xl shadow-2xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">Citizen Portal</h2>
+                <p class="text-slate-500">Report and track community issues</p>
+            </div>
+
+            <div class="flex mb-8 bg-slate-100 rounded-xl p-1 shadow-inner">
+                <button onclick="showCitizenTab('login')" id="citizenLoginTab"
+                    class="flex-1 py-2.5 px-4 rounded-lg text-sm font-bold transition-all bg-white text-blue-600 shadow">Login</button>
+                <button onclick="showCitizenTab('signup')" id="citizenSignupTab"
+                    class="flex-1 py-2.5 px-4 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-800">Sign
+                    Up</button>
+            </div>
+
+            <form id="citizenLoginForm" onsubmit="citizenLogin(event)" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Email Address</label>
+                    <input type="text" id="citizenUsername" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Password</label>
+                    <input type="password" id="citizenPassword" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <button type="submit"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-xl transition duration-300 shadow-lg">Sign
+                    In</button>
+            </form>
+
+            <form id="citizenSignupForm" onsubmit="citizenSignup(event)"
+                class="space-y-4 hidden h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                <div><label class="block text-sm font-semibold text-slate-700 mb-1">Full Name</label><input type="text"
+                        id="citizenName" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div><label class="block text-sm font-semibold text-slate-700 mb-1">Mobile Number</label><input
+                        type="tel" id="citizenMobile" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div><label class="block text-sm font-semibold text-slate-700 mb-1">Email</label><input type="email"
+                        id="citizenEmail" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div><label class="block text-sm font-semibold text-slate-700 mb-1">Password</label><input
+                        type="password" id="citizenNewPassword" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div><label class="block text-sm font-semibold text-slate-700 mb-1">Address</label><textarea
+                        id="citizenAddress" rows="3" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="Enter your full address"></textarea></div>
+                <button type="submit"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-xl transition duration-300 shadow-lg">Create
+                    Account</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="officialLogin" class="min-h-screen flex items-center justify-center p-4 hidden relative">
+        <button onclick="showUserTypeSelection()"
+            class="absolute top-8 left-8 bg-white p-3 rounded-full shadow-md text-slate-500 hover:text-emerald-600 transition"><svg
+                class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg></button>
+        <div class="glass-card rounded-3xl shadow-2xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">Official Portal</h2>
+                <p class="text-slate-500">Manage and resolve civic issues</p>
+            </div>
+
+            <div class="flex mb-8 bg-slate-100 rounded-xl p-1 shadow-inner">
+                <button onclick="showOfficialTab('login')" id="loginTab"
+                    class="flex-1 py-2.5 px-4 rounded-lg text-sm font-bold transition-all bg-white text-emerald-600 shadow">Login</button>
+                <button onclick="showOfficialTab('signup')" id="signupTab"
+                    class="flex-1 py-2.5 px-4 rounded-lg text-sm font-bold transition-all text-slate-500 hover:text-slate-800">Sign
+                    Up</button>
+            </div>
+
+            <form id="officialLoginForm" onsubmit="officialLogin(event)" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Department ID</label>
+                    <input type="text" id="officialDeptId" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                        placeholder="e.g. WATER001">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Password</label>
+                    <input type="password" id="officialPassword" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+                <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-6 rounded-xl transition duration-300 shadow-lg">Sign
+                    In</button>
+            </form>
+
+            <form id="officialSignupForm" onsubmit="officialSignup(event)"
+                class="space-y-4 hidden h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                <div><label class="block text-sm font-semibold text-slate-700 mb-1">Full Name</label><input type="text"
+                        id="officialName" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+                <div><label class="block text-sm font-semibold text-slate-700 mb-1">Mobile Number</label><input
+                        type="tel" id="officialMobile" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Department</label>
+                    <select id="officialDepartment" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <option value="">Select Department</option>
+                        <option value="water">Water & Sanitation</option>
+                        <option value="roads">Roads & Infrastructure</option>
+                        <option value="electricity">Electricity</option>
+                        <option value="waste">Waste Management</option>
+                        <option value="parks">Parks & Recreation</option>
+                        <option value="health">Public Health</option>
+                        <option value="drainage">Drainage & Sewage</option>
+                        <option value="transport">Public Transport</option>
+                        <option value="fire">Fire & Emergency</option>
+                        <option value="building">Building & Planning</option>
+                    </select>
+                </div>
+                <div><label class="block text-sm font-semibold text-slate-700 mb-1">Department ID</label><input
+                        type="text" id="officialNewDeptId" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+                <div><label class="block text-sm font-semibold text-slate-700 mb-1">Username</label><input type="text"
+                        id="officialUsername" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+                <div><label class="block text-sm font-semibold text-slate-700 mb-1">Password</label><input
+                        type="password" id="officialNewPassword" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+                <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-6 rounded-xl transition duration-300 shadow-lg">Create
+                    Account</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="adminLogin" class="min-h-screen flex items-center justify-center p-4 hidden relative">
+        <button onclick="showUserTypeSelection()"
+            class="absolute top-8 left-8 bg-white p-3 rounded-full shadow-md text-slate-500 hover:text-purple-600 transition"><svg
+                class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg></button>
+        <div class="glass-card rounded-3xl shadow-2xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">Admin Portal</h2>
+                <p class="text-slate-500">System Management & Oversight</p>
+            </div>
+            <form onsubmit="adminLogin(event)" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Admin Username</label>
+                    <input type="text" id="adminUsername" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Password</label>
+                    <input type="password" id="adminPassword" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none">
+                </div>
+                <button type="submit"
+                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3.5 px-6 rounded-xl transition duration-300 shadow-lg shadow-purple-500/30">Admin
+                    Sign In</button>
+                <p class="text-xs text-center text-slate-400 mt-2">Hint: admin / admin123</p>
+            </form>
+        </div>
+    </div>
+
+    <div id="citizenDashboard" class="min-h-screen hidden">
+        <nav class="bg-white/80 backdrop-blur-md shadow-sm border-b sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 id="citizenHeaderName" class="text-xl font-bold text-blue-700 tracking-tight">Citizen Portal
+                    </h1>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="showCitizenSection('problemUpload')"
+                        class="text-slate-600 hover:text-blue-600 font-medium px-3 py-2 rounded-lg hover:bg-blue-50 transition">Dashboard</button>
+                    <button onclick="showCitizenSection('profile')"
+                        class="text-slate-600 hover:text-blue-600 font-medium px-3 py-2 rounded-lg hover:bg-blue-50 transition">Profile</button>
+                    <div class="h-6 w-px bg-slate-200 mx-2"></div>
+                    <button onclick="logout()"
+                        class="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition"
+                        title="Logout">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div id="citizenProblemUpload" class="fade-in grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2">
+                    <div
+                        class="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 mb-6 relative overflow-hidden">
+                        <h2 class="text-2xl font-extrabold text-slate-800 mb-8">Report a Civic Issue</h2>
+                        <form onsubmit="submitProblem(event)" class="space-y-6">
+                            <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 border-dashed">
+                                <label class="block text-sm font-bold text-slate-700 mb-3">Proof of Issue
+                                    (Image)</label>
+                                <div class="space-y-4">
+                                    <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
+                                        <button type="button" onclick="openCamera()"
+                                            class="flex-1 bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold px-4 py-3 rounded-xl transition flex items-center justify-center space-x-2 shadow-sm"><span
+                                                class="text-sm">Open Camera</span></button>
+                                        <button type="button" onclick="document.getElementById('problemImage').click()"
+                                            class="flex-1 bg-white border-2 border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold px-4 py-3 rounded-xl transition flex items-center justify-center space-x-2 shadow-sm"><span
+                                                class="text-sm">Upload Gallery</span></button>
+                                    </div>
+                                    <input type="file" id="problemImage" accept="image/*" class="hidden">
+                                    <div id="imagePreview" class="hidden relative mt-4">
+                                        <img id="previewImg"
+                                            class="w-full h-56 object-cover rounded-xl border-2 border-blue-200 shadow-sm">
+                                        <button type="button" onclick="clearImage()"
+                                            class="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 shadow transition">X</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 mb-2">Department</label>
+                                    <select id="problemDepartment" required
+                                        class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 transition outline-none shadow-sm">
+                                        <option value="">Select Department</option>
+                                        <option value="water">Water & Sanitation</option>
+                                        <option value="roads">Roads & Infrastructure</option>
+                                        <option value="electricity">Electricity</option>
+                                        <option value="waste">Waste Management</option>
+                                        <option value="parks">Parks & Recreation</option>
+                                        <option value="health">Public Health</option>
+                                        <option value="drainage">Drainage & Sewage</option>
+                                        <option value="transport">Public Transport</option>
+                                        <option value="fire">Fire & Emergency</option>
+                                        <option value="building">Building & Planning</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 mb-2">Priority
+                                        Level</label>
+                                    <select id="problemPriority" required
+                                        class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 transition outline-none shadow-sm">
+                                        <option value="">Select Priority</option>
+                                        <option value="low">Low (Minor annoyance)</option>
+                                        <option value="medium">Medium (Needs attention)</option>
+                                        <option value="high">High (Causing disruption)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Description</label>
+                                <textarea id="problemDescription" rows="3" required
+                                    class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 transition outline-none shadow-sm"
+                                    placeholder="Please describe the issue..."></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">📍 Location</label>
+                                <div class="flex space-x-2">
+                                    <input type="text" id="problemLocation"
+                                        placeholder="Click the button to pin your location on map" required readonly
+                                        class="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 transition outline-none shadow-sm cursor-default text-slate-700">
+                                    <button type="button" onclick="openMapPicker()"
+                                        class="bg-blue-600 text-white font-bold px-4 rounded-xl hover:bg-blue-700 transition shadow-sm flex items-center justify-center whitespace-nowrap min-w-[140px] gap-2">
+                                        🗺️ Pin on Map
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="submit"
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl transition duration-300 shadow-lg shadow-blue-500/30 text-lg mt-4">Submit
+                                Issue Report</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-1">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sticky top-24">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-bold text-slate-800">Your Recent Reports</h3>
+                            <button onclick="showCitizenSection('profile')"
+                                class="text-sm text-blue-600 hover:underline font-medium">View All</button>
+                        </div>
+                        <div id="citizenProblems" class="space-y-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="citizenProfile" class="hidden fade-in">
+                <div class="mb-6 flex justify-between items-center">
+                    <h2 class="text-3xl font-extrabold text-slate-800">My Profile & Reports</h2>
+                    <button onclick="showCitizenSection('problemUpload')"
+                        class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 transition shadow-sm font-medium">Back
+                        to Dashboard</button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:col-span-1">
+                        <h3 class="text-xl font-bold text-slate-800 mb-4">Edit Profile</h3>
+                        <form onsubmit="updateCitizenProfile(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Full Name</label>
+                                <input type="text" id="editCitName"
+                                    class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                                    required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Email</label>
+                                <input type="email" id="editCitEmail"
+                                    class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                                    required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Phone</label>
+                                <input type="text" id="editCitMobile"
+                                    class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                                    required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Address</label>
+                                <textarea id="editCitAddress"
+                                    class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                                    rows="2" required></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">New Password
+                                    (Optional)</label>
+                                <input type="password" id="editCitPassword"
+                                    class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                                    placeholder="Leave blank to keep current">
+                            </div>
+                            <button type="submit"
+                                class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg text-sm hover:bg-blue-700 transition">Save
+                                Changes</button>
+                        </form>
+                    </div>
+
+                    <div
+                        class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:col-span-2 flex flex-col items-center justify-center">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4 self-start">Resolution Success Rate</h3>
+                        <div class="w-full max-w-[280px]">
+                            <canvas id="citizenStatsChart"></canvas>
+                        </div>
+                        <div class="flex justify-center space-x-6 mt-6 w-full text-center">
+                            <div>
+                                <p class="text-2xl font-bold text-slate-800" id="totalReports">0</p>
+                                <p class="text-xs text-slate-500 uppercase tracking-wide font-semibold">Total</p>
+                            </div>
+                            <div>
+                                <p class="text-2xl font-bold text-blue-600" id="progressReports">0</p>
+                                <p class="text-xs text-slate-500 uppercase tracking-wide font-semibold">Progress</p>
+                            </div>
+                            <div>
+                                <p class="text-2xl font-bold text-emerald-500" id="completedReports">0</p>
+                                <p class="text-xs text-slate-500 uppercase tracking-wide font-semibold">Resolved</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                    <h3 class="text-xl font-bold text-slate-800 mb-6">Complete Report History</h3>
+                    <div id="allCitizenProblems" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="officialDashboard" class="min-h-screen hidden">
+        <nav class="bg-slate-900 shadow-md sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-emerald-500 rounded flex items-center justify-center mr-3"><span
+                            class="text-white font-bold">O</span></div>
+                    <h1 id="officialHeaderDept" class="text-xl font-bold text-white tracking-wide">Official Portal</h1>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="showOfficialSection('problems')"
+                        class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-slate-800 transition">Tickets</button>
+                    <button onclick="showOfficialSection('profile')"
+                        class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-slate-800 transition">Profile</button>
+                    <div class="h-6 w-px bg-slate-700 mx-2"></div>
+                    <button onclick="logout()"
+                        class="text-red-400 hover:text-red-300 p-2 rounded-full hover:bg-slate-800 transition"
+                        title="Logout">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div id="officialProblems" class="fade-in">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                    <h2 class="text-3xl font-extrabold text-slate-800 mb-4 md:mb-0">Ticket Management</h2>
+                    <div class="flex gap-3">
+                        <input type="text" id="officialSearchInput" onkeyup="loadOfficialProblems()"
+                            placeholder="Search ID..."
+                            class="px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-emerald-500">
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
+                    <div class="flex mb-8 bg-slate-100 rounded-xl p-1 shadow-inner overflow-x-auto custom-scrollbar">
+                        <button onclick="filterOfficialProblems('all')" id="allProblemsTab"
+                            class="flex-1 py-2.5 px-4 rounded-lg text-sm font-bold bg-white text-slate-800 shadow">All
+                            Tickets</button>
+                        <button onclick="filterOfficialProblems('pending')" id="pendingProblemsTab"
+                            class="flex-1 py-2.5 px-4 rounded-lg text-sm font-bold text-slate-500">Pending</button>
+                        <button onclick="filterOfficialProblems('progress')" id="progressProblemsTab"
+                            class="flex-1 py-2.5 px-4 rounded-lg text-sm font-bold text-slate-500">In Progress</button>
+                        <button onclick="filterOfficialProblems('completed')" id="completedProblemsTab"
+                            class="flex-1 py-2.5 px-4 rounded-lg text-sm font-bold text-slate-500">Resolved</button>
+                    </div>
+                    <div id="officialProblemsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                </div>
+            </div>
+
+            <div id="officialProfile" class="hidden fade-in">
+                <div class="mb-6 flex justify-between items-center">
+                    <h2 class="text-3xl font-extrabold text-slate-800">Department Analytics & Profile</h2>
+                    <button onclick="showOfficialSection('problems')"
+                        class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50 transition shadow-sm font-medium">Back
+                        to Tickets</button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <div
+                        class="bg-slate-900 rounded-2xl shadow-lg border border-slate-800 p-6 lg:col-span-1 text-white">
+                        <h3 class="text-xl font-bold mb-4">Edit Profile</h3>
+                        <form onsubmit="updateOfficialProfile(event)"
+                            class="space-y-4 bg-slate-800 p-4 rounded-xl border border-slate-700">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 mb-1">Full Name</label>
+                                <input type="text" id="editOffName"
+                                    class="w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg text-sm"
+                                    required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 mb-1">Username</label>
+                                <input type="text" id="editOffUsername"
+                                    class="w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg text-sm"
+                                    required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 mb-1">Mobile Number</label>
+                                <input type="text" id="editOffMobile"
+                                    class="w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg text-sm"
+                                    required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 mb-1">New Password
+                                    (Optional)</label>
+                                <input type="password" id="editOffPassword"
+                                    class="w-full px-3 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg text-sm"
+                                    placeholder="Leave blank to keep current">
+                            </div>
+                            <button type="submit"
+                                class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-sm transition">Update
+                                Profile</button>
+                        </form>
+                    </div>
+
+                    <div
+                        class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 lg:col-span-2 flex flex-col md:flex-row gap-8 items-center justify-center">
+                        <div class="flex-1 w-full max-w-[280px]">
+                            <h4 class="text-center font-bold text-slate-700 mb-4">Task Completion Status</h4>
+                            <canvas id="officialStatsChart"></canvas>
+                        </div>
+
+                        <div class="flex-1 grid grid-cols-2 gap-4 w-full">
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                <p class="text-sm text-slate-500 font-semibold mb-1">Total Assigned</p>
+                                <p class="text-3xl font-extrabold text-slate-800" id="totalAssigned">0</p>
+                            </div>
+                            <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                                <p class="text-sm text-emerald-600 font-semibold mb-1">Success Rate</p>
+                                <p class="text-3xl font-extrabold text-emerald-700" id="successRate">0%</p>
+                            </div>
+                            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                <p class="text-sm text-blue-600 font-semibold mb-1">In Progress</p>
+                                <p class="text-3xl font-extrabold text-blue-700" id="totalInProgress">0</p>
+                            </div>
+                            <div class="bg-emerald-500 p-4 rounded-xl text-white shadow-md shadow-emerald-500/20">
+                                <p class="text-sm font-semibold mb-1 opacity-90">Total Solved</p>
+                                <p class="text-3xl font-extrabold" id="totalSolved">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="adminDashboard" class="min-h-screen hidden bg-slate-50">
+        <nav class="bg-purple-900 shadow-md sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-purple-500 rounded flex items-center justify-center mr-3"><span
+                            class="text-white font-bold">A</span></div>
+                    <h1 class="text-xl font-bold text-white tracking-wide">Super Admin Portal</h1>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="showAdminSection('overview')"
+                        class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-purple-800 transition">Overview</button>
+                    <button onclick="showAdminSection('users')"
+                        class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-purple-800 transition">Citizens</button>
+                    <button onclick="showAdminSection('officials')"
+                        class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-purple-800 transition">Officials</button>
+                    <button onclick="showAdminSection('feedbacks')"
+                        class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-purple-800 transition">Review
+                        Feedbacks</button>
+                    <div class="h-6 w-px bg-purple-700 mx-2"></div>
+                    <button onclick="logout()"
+                        class="text-red-300 hover:text-red-200 p-2 rounded-full hover:bg-purple-800 transition"
+                        title="Logout">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div id="adminOverview" class="fade-in space-y-6">
+                <h2 class="text-3xl font-extrabold text-slate-800">System Overview</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <p class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Total Citizens</p>
+                        <p class="text-4xl font-extrabold text-blue-600" id="adminStatCitizens">0</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <p class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Total Officials</p>
+                        <p class="text-4xl font-extrabold text-emerald-600" id="adminStatOfficials">0</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <p class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Active Tickets</p>
+                        <p class="text-4xl font-extrabold text-purple-600" id="adminStatTickets">0</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <p class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Pending Feedbacks</p>
+                        <p class="text-4xl font-extrabold text-amber-500" id="adminStatFeedbacks">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="adminUsers" class="hidden fade-in space-y-6">
+                <h2 class="text-3xl font-extrabold text-slate-800">Manage Citizens</h2>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    ID</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Name</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Email</th>
+                                <th
+                                    class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-slate-200" id="adminCitizensList"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="adminOfficials" class="hidden fade-in space-y-6">
+                <h2 class="text-3xl font-extrabold text-slate-800">Manage Officials</h2>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    ID</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Name</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Department</th>
+                                <th
+                                    class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                    Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-slate-200" id="adminOfficialsList"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="adminFeedbacks" class="hidden fade-in space-y-6">
+                <h2 class="text-3xl font-extrabold text-slate-800">Review Feedbacks & Reassign</h2>
+                <p class="text-slate-500">View citizen feedback on completed tickets. Approve and Close, or Reassign to
+                    official.</p>
+                <div id="adminFeedbackList" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="feedbackModal"
+        class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md fade-in">
+            <h2 class="text-2xl font-extrabold text-slate-800 mb-2">Leave Feedback</h2>
+            <p class="text-sm text-slate-500 mb-6">Your feedback goes directly to system admins to ensure quality
+                service.</p>
+            <form onsubmit="submitFeedback(event)" class="space-y-6">
+                <input type="hidden" id="feedbackProblemId">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Comments (Optional but helpful)</label>
+                    <textarea id="feedbackText" rows="4"
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="Was the issue resolved completely? Let us know..."></textarea>
+                </div>
+                <div class="flex space-x-3 pt-2">
+                    <button type="button" onclick="closeFeedbackModal()"
+                        class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3.5 rounded-xl transition">Cancel</button>
+                    <button type="submit"
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg">Submit
+                        to Admin</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="statusUpdateModal"
+        class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md fade-in">
+            <h2 class="text-2xl font-extrabold text-slate-800 mb-6">Update Status</h2>
+            <form onsubmit="updateProblemStatus(event)" class="space-y-6">
+                <input type="hidden" id="updateProblemId">
+                <div>
+                    <select id="newStatus" required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 font-medium">
+                        <option value="progress">In Progress</option>
+                        <option value="completed">Resolved (Completed)</option>
+                    </select>
+                </div>
+                <div id="proofUploadSection" class="hidden p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <label class="block text-sm font-bold text-emerald-800 mb-2">Upload Resolution Proof
+                        (Required)</label>
+                    <div class="flex space-x-3 mb-3">
+                        <button type="button" onclick="document.getElementById('proofImage').click()"
+                            class="flex-1 bg-white border border-emerald-300 text-emerald-700 font-bold py-2 rounded-lg text-sm hover:bg-emerald-100 transition shadow-sm">Upload
+                            Image</button>
+                    </div>
+                    <input type="file" id="proofImage" accept="image/*" class="hidden">
+                    <div id="proofImagePreview" class="hidden relative">
+                        <img id="proofPreviewImg"
+                            class="w-full h-32 object-cover rounded-lg border-2 border-emerald-200">
+                        <button type="button" onclick="clearProofImage()"
+                            class="absolute top-1 right-1 bg-red-500 text-white p-1 rounded hover:bg-red-600 text-xs shadow">Clear</button>
+                    </div>
+                </div>
+                <div class="flex space-x-3 pt-2">
+                    <button type="button" onclick="closeStatusUpdate()"
+                        class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3.5 rounded-xl transition">Cancel</button>
+                    <button type="submit"
+                        class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="cameraModal"
+        class="fixed inset-0 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-lg fade-in flex flex-col items-center">
+            <h2 class="text-2xl font-extrabold text-slate-800 mb-4 w-full text-left">Take a Photo</h2>
+            <div class="relative w-full bg-black rounded-2xl overflow-hidden mb-6 flex justify-center items-center"
+                style="min-height: 300px;">
+                <video id="cameraVideo" autoplay playsinline class="w-full h-auto object-cover max-h-[60vh]"></video>
+                <div id="cameraLoading" class="absolute text-white font-semibold">Accessing camera...</div>
+            </div>
+            <div class="flex space-x-4 w-full">
+                <button type="button" onclick="closeCamera()"
+                    class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3.5 rounded-xl transition shadow-sm">Cancel</button>
+                <button type="button" onclick="takePhoto()"
+                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg flex items-center justify-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z">
+                        </path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <span>Capture</span>
+                </button>
+            </div>
+            <canvas id="cameraCanvas" class="hidden"></canvas>
+        </div>
+    </div>
+
+
+
+
+    <!-- ══ Google Map Picker Modal ════════════════════════════════ -->
+    <div id="mapPickerModal"
+        class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col fade-in"
+            style="height:90vh;max-height:620px">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 pt-5 pb-3 border-b border-slate-100">
+                <div>
+                    <h2 class="text-xl font-extrabold text-slate-800">📍 Pin Your Location</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Click anywhere on the map to drop a pin</p>
+                </div>
+                <button onclick="closeMapPicker()"
+                    class="text-slate-400 hover:text-red-500 transition text-2xl leading-none">&times;</button>
+            </div>
+            <!-- Map -->
+            <div id="mapContainer" class="flex-1 relative">
+                <div id="googleMap" class="w-full h-full"></div>
+                <!-- Loading overlay -->
+                <div id="mapLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-100">
+                    <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3">
+                    </div>
+                    <p class="text-sm text-slate-500">Loading map…</p>
+                </div>
+                <!-- Centre-on-me button -->
+                <button onclick="centreOnMe()" title="Use my location"
+                    class="absolute bottom-4 right-4 bg-white shadow-lg rounded-xl p-3 hover:bg-blue-50 transition border border-slate-200 z-10 text-xl">
+                    🎯
+                </button>
+            </div>
+            <!-- Address bar -->
+            <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 rounded-b-3xl">
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Selected Address</p>
+                <p id="mapSelectedAddress" class="text-sm text-slate-700 min-h-[20px]">No location selected yet</p>
+                <div class="flex space-x-3 mt-4">
+                    <button onclick="closeMapPicker()"
+                        class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 rounded-xl transition">Cancel</button>
+                    <button id="confirmLocationBtn" onclick="confirmMapLocation()" disabled
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition shadow-lg">✔
+                        Confirm Location</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="popupContainer" class="fixed top-4 right-4 z-50 space-y-3"></div>
+
+
+    <script src="app.js"></script>
+</body>
+
+</html>
