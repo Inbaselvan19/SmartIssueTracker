@@ -1,4 +1,3 @@
-        // Global state
         let apiToken = null;
         let currentUser = null;
         let currentUserType = null;
@@ -8,8 +7,13 @@
         let capturedImageBlob = null;
         let citizenChartInstance = null;
         let officialChartInstance = null;
+        let adminDeptChartInstance = null;
+        let adminStatusChartInstance = null;
         let videoStream = null;
         let pendingAuthData = null;
+        let satisfactionProblemId = null;
+        let selectedRatingValue = 0;
+        let currentCitizenHistoryFilter = 'all';
 
         const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api';
 
@@ -155,6 +159,7 @@
                 document.getElementById('citizenHeaderName').textContent = currentUser.name;
                 hideAllSections(); document.getElementById('citizenDashboard').classList.remove('hidden');
                 await syncData(); loadCitizenProblems(); showPopup('success', 'Logged in');
+                startNotificationPolling();
             } catch (e) { showPopup('error', e.message); }
         }
 
@@ -200,7 +205,13 @@
                 await showAdminSection('overview'); showPopup('success', 'Admin Logged In');
             } catch (e) { showPopup('error', e.message); }
         }
-        function logout() { currentUser = null; currentUserType = null; apiToken = null; problems = []; citizens = []; officials = []; showUserTypeSelection(); }
+        function logout() {
+            stopNotificationPolling();
+            currentUser = null; currentUserType = null; apiToken = null;
+            problems = []; citizens = []; officials = [];
+            lastKnownStatuses = {};
+            showUserTypeSelection();
+        }
 
         function getBase64(file) { return new Promise((res, rej) => { const r = new FileReader(); r.readAsDataURL(file); r.onload = () => res(r.result); r.onerror = e => rej(e); }); }
 
@@ -306,29 +317,55 @@
         }
 
         // Removed actual functionality from update profile to preserve original UI without making breaking changes to missing endpoints
-        function updateCitizenProfile(e) { e.preventDefault(); showPopup('warning', 'Profile update not implemented in DB version yet.'); }
-        function updateOfficialProfile(e) { e.preventDefault(); showPopup('warning', 'Profile update not implemented in DB version yet.'); }
+        async function updateCitizenProfile(e) {
+            e.preventDefault();
+            const name     = document.getElementById('editCitName').value;
+            const mobile   = document.getElementById('editCitMobile').value;
+            const address  = document.getElementById('editCitAddress').value;
+            const password = document.getElementById('editCitPassword').value;
+            try {
+                const res = await apiFetch('/users/citizen/profile', 'PUT', { name, mobile, address, password: password || undefined });
+                // Update local state so header name reflects immediately
+                currentUser = { ...currentUser, ...res.user };
+                document.getElementById('citizenHeaderName').textContent = currentUser.name;
+                showPopup('success', '✅ Profile updated successfully!');
+            } catch (e) { showPopup('error', e.message); }
+        }
+        async function updateOfficialProfile(e) {
+            e.preventDefault();
+            const name     = document.getElementById('editOffName').value;
+            const mobile   = document.getElementById('editOffMobile').value;
+            const password = document.getElementById('editOffPassword').value;
+            try {
+                const res = await apiFetch('/users/official/profile', 'PUT', { name, mobile, password: password || undefined });
+                currentUser = { ...currentUser, ...res.user };
+                document.getElementById('officialHeaderDept').textContent = getDepartmentName(currentUser.department) + ' Portal';
+                showPopup('success', '✅ Profile updated successfully!');
+            } catch (e) { showPopup('error', e.message); }
+        }
 
         async function submitProblem(e) {
             e.preventDefault();
             const imgFile = document.getElementById('problemImage').files[0];
-            const hasImage = imgFile || capturedImageBlob;
-            
-            // Generate form data for multer upload instead of base64
             const formData = new FormData();
             formData.append('department', document.getElementById('problemDepartment').value);
             formData.append('priority', document.getElementById('problemPriority').value);
             formData.append('description', document.getElementById('problemDescription').value);
             formData.append('location', document.getElementById('problemLocation').value);
+            if (mapPickerLatLng) {
+                formData.append('lat', mapPickerLatLng.lat);
+                formData.append('lng', mapPickerLatLng.lng);
+            }
             if (imgFile) formData.append('image', imgFile);
             else if (capturedImageBlob) formData.append('image', capturedImageBlob, 'capture.jpg');
-            
             try {
                 const headers = {};
                 if (apiToken) headers['Authorization'] = 'Bearer ' + apiToken;
                 const res = await fetch(API_BASE + '/problems', { method: 'POST', headers, body: formData });
                 if (!res.ok) { let err; try { err = (await res.json()).error; } catch (e) { err = res.statusText; } throw new Error(err); }
-                showPopup('success', 'Ticket Submitted'); e.target.reset(); clearImage(); await syncData(); loadCitizenProblems();
+                showPopup('success', '✅ Ticket Submitted Successfully!');
+                e.target.reset(); clearImage(); mapPickerLatLng = null;
+                await syncData(); loadCitizenProblems(); updateNotificationSnapshot();
             } catch (err) { showPopup('error', err.message); }
         }
 
@@ -338,18 +375,45 @@
             const isOfficial = role === 'official', isAdmin = role === 'admin';
             const colors = { pending: 'bg-yellow-100 text-yellow-800', progress: 'bg-blue-100 text-blue-800', completed: 'bg-emerald-100 text-emerald-800', closed: 'bg-slate-200 text-slate-800', low: 'text-slate-500', medium: 'text-amber-600', high: 'text-orange-600', urgent: 'text-red-600 font-bold' };
             const proofHtml = problem.proof_image ? `<div class="mt-3 mb-3 rounded-xl overflow-hidden border-2 border-emerald-200 relative"><div class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-1 absolute top-0 left-0 rounded-br-lg">Official Proof</div><img src="${problem.proof_image}" class="w-full h-32 object-cover"></div>` : '';
+            const ratingHtml = problem.rating ? `<div class="flex items-center space-x-1 mt-1">${'⭐'.repeat(problem.rating)}${'☆'.repeat(5 - problem.rating)} <span class="text-xs text-slate-400 ml-1">${problem.rating}/5</span></div>` : '';
+            const dateStr = problem.date_reported ? new Date(problem.date_reported).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+            const isOverdue = problem.status === 'pending' && (Date.now() - new Date(problem.date_reported)) > 7 * 24 * 60 * 60 * 1000;
+            const overdueBadge = isOverdue ? `<span class="ml-1 px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full border border-red-200 animate-pulse">⏰ Overdue</span>` : '';
+            const printBtn = role === 'citizen' ? `<button onclick="printTicket('${problem.id}')" title="Print Ticket" class="text-slate-400 hover:text-blue-600 transition p-1 rounded">🖨️</button>` : '';
             let feedbackHtml = '';
-            if (problem.feedback) feedbackHtml = `<div class="mt-3 p-3 bg-purple-50 rounded-xl border border-purple-100"><p class="text-xs font-bold text-purple-800 mb-1">Citizen Feedback:</p><p class="text-sm italic">"${problem.feedback}"</p></div>`;
-            else if (role === 'citizen' && problem.status === 'completed') feedbackHtml = `<div class="mt-3 pt-3 border-t"><button onclick="openFeedbackModal('${problem.id}')" class="text-sm text-blue-600 font-bold hover:underline">Leave Feedback for Admin</button></div>`;
+            // Detect if this ticket was reassigned (feedback contains [Admin: Re-evaluate]) and is now completed
+            const wasReassigned = problem.feedback && problem.feedback.includes('[Admin: Re-evaluate]');
+            if (problem.feedback) feedbackHtml = `<div class="mt-3 p-3 bg-purple-50 rounded-xl border border-purple-100"><p class="text-xs font-bold text-purple-800 mb-1">Citizen Feedback: ${ratingHtml}</p><p class="text-sm italic">"${problem.feedback}"</p></div>`;
+            else if (role === 'citizen' && problem.status === 'completed') {
+                if (wasReassigned) {
+                    // After reassignment → show satisfaction check instead of plain feedback
+                    feedbackHtml = `<div class="mt-3 pt-3 border-t space-y-2">
+                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+                            <p class="text-xs font-bold text-amber-700 mb-2">⚠️ This issue was previously reassigned. Is it now resolved?</p>
+                            <div class="flex space-x-2">
+                                <button onclick="openSatisfactionCheck('${problem.id}')" class="flex-1 bg-emerald-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-emerald-700 transition">✅ Confirm Resolution</button>
+                            </div>
+                        </div>
+                    </div>`;
+                } else {
+                    feedbackHtml = `<div class="mt-3 pt-3 border-t"><button onclick="openFeedbackModal('${problem.id}')" class="text-sm text-blue-600 font-bold hover:underline">Leave Feedback for Admin</button></div>`;
+                }
+            }
             let adminActionHtml = '';
             if (isAdmin && problem.feedback) adminActionHtml = `<div class="mt-4 pt-3 border-t flex space-x-2"><button onclick="approveAndClose('${problem.id}')" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg hover:bg-emerald-700 transition shadow-sm text-sm">Approve & Close</button><button onclick="reassignToOfficial('${problem.id}')" class="flex-1 bg-amber-500 text-white font-bold py-2 rounded-lg hover:bg-amber-600 transition shadow-sm text-sm">Reassign</button></div>`;
             return `
                 <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex flex-col h-full">
-                    <div class="flex justify-between items-start mb-3">
-                        <span class="font-mono text-sm font-bold text-slate-500">${problem.id}</span>
-                        <div class="flex space-x-2">
+                    <div class="flex justify-between items-center mb-3">
+                        <div>
+                            <div class="flex items-center flex-wrap gap-1">
+                                <span class="font-mono text-sm font-bold text-slate-500">${problem.id}</span>${overdueBadge}
+                            </div>
+                            ${dateStr ? `<p class="text-xs text-slate-400 mt-0.5">📅 ${dateStr}</p>` : ''}
+                        </div>
+                        <div class="flex items-center space-x-1 flex-shrink-0">
                             <span class="px-2 py-1 rounded-md text-xs font-bold ${colors[problem.status]} uppercase">${problem.status}</span>
-                            ${isOfficial && problem.status !== 'completed' && problem.status !== 'closed' ? `<button onclick="openStatusUpdate('${problem.id}')" class="bg-emerald-500 text-white p-1 rounded hover:bg-emerald-600">Update</button>` : ''}
+                            ${isOfficial && problem.status !== 'completed' && problem.status !== 'closed' ? `<button onclick="openStatusUpdate('${problem.id}')" class="bg-emerald-500 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-600 text-xs font-bold transition">Update</button>` : ''}
+                            ${printBtn}
                         </div>
                     </div>
                     ${problem.image_data ? `<img src="${problem.image_data}" class="w-full h-32 object-cover rounded-lg mb-3">` : ''}
@@ -361,11 +425,99 @@
                 </div>`;
         }
 
-        function openFeedbackModal(id) { document.getElementById('feedbackProblemId').value = id; document.getElementById('feedbackModal').classList.remove('hidden'); }
+        function openFeedbackModal(id) {
+            document.getElementById('feedbackProblemId').value = id;
+            document.getElementById('feedbackText').value = '';
+            // Reset stars
+            selectedRatingValue = 0;
+            setRating(0);
+            document.getElementById('feedbackModal').classList.remove('hidden');
+        }
         function closeFeedbackModal() { document.getElementById('feedbackModal').classList.add('hidden'); }
+
+        // ── Star Rating ──────────────────────────────────────────────────────
+        const ratingLabels = ['', 'Poor 😞', 'Fair 😐', 'Good 🙂', 'Very Good 😊', 'Excellent 🌟'];
+        function setRating(n) {
+            selectedRatingValue = n;
+            document.getElementById('selectedRating').value = n;
+            for (let i = 1; i <= 5; i++) {
+                const star = document.getElementById('star' + i);
+                if (star) star.className = `text-4xl transition-all star-btn ${i <= n ? 'text-yellow-400 scale-110' : 'text-slate-300 hover:text-yellow-400'}`;
+            }
+            const lbl = document.getElementById('ratingLabel');
+            if (lbl) lbl.textContent = n > 0 ? ratingLabels[n] : 'Click a star to rate';
+        }
+
         async function submitFeedback(e) {
-            e.preventDefault(); const id = document.getElementById('feedbackProblemId').value; const feedback = document.getElementById('feedbackText').value;
-            try { await apiFetch(`/problems/${id}/feedback`, 'PUT', { feedback }); closeFeedbackModal(); showPopup('success', 'Sent to Admin'); await syncData(); loadCitizenProblems(); loadCitizenProfile(); } catch (e) { showPopup('error', e.message); }
+            e.preventDefault();
+            const id = document.getElementById('feedbackProblemId').value;
+            const feedback = document.getElementById('feedbackText').value || `Citizen rated this ticket ${selectedRatingValue}/5 stars.`;
+            const rating = selectedRatingValue > 0 ? selectedRatingValue : undefined;
+            if (!selectedRatingValue) return showPopup('warning', 'Please select a star rating before submitting.');
+            try {
+                await apiFetch(`/problems/${id}/feedback`, 'PUT', { feedback, rating });
+                closeFeedbackModal();
+                showPopup('success', `⭐ Thank you! Your ${selectedRatingValue}-star rating was submitted.`);
+                await syncData(); loadCitizenProblems(); loadCitizenProfile();
+            } catch (e) { showPopup('error', e.message); }
+        }
+
+        // ── Satisfaction Check Flow ──────────────────────────────────────────
+        function openSatisfactionCheck(id) {
+            satisfactionProblemId = id;
+            document.getElementById('satisfactionTicketId').textContent = 'Ticket: ' + id;
+            document.getElementById('satisfactionModal').classList.remove('hidden');
+        }
+        function closeSatisfactionModal() {
+            document.getElementById('satisfactionModal').classList.add('hidden');
+            satisfactionProblemId = null;
+        }
+        async function satisfactionYes() {
+            // Citizen confirms resolved → submit positive feedback and close
+            try {
+                await apiFetch(`/problems/${satisfactionProblemId}/feedback`, 'PUT', { feedback: 'Citizen confirmed: Issue resolved after reassignment. ✅' });
+                closeSatisfactionModal();
+                showPopup('success', '🎉 Great! Ticket marked as resolved.');
+                await syncData(); loadCitizenProblems(); loadCitizenProfile();
+            } catch (e) { showPopup('error', e.message); }
+        }
+        function satisfactionNo() {
+            // Citizen says problem NOT solved → open re-raise modal
+            const id = satisfactionProblemId;
+            closeSatisfactionModal();
+            document.getElementById('reraiseProblemId').value = id;
+            document.getElementById('reraiseTicketIdLabel').textContent = 'Original Ticket: ' + id;
+            document.getElementById('reraiseDescription').value = '';
+            document.getElementById('reraiseModal').classList.remove('hidden');
+        }
+        function closeReraiseModal() {
+            document.getElementById('reraiseModal').classList.add('hidden');
+        }
+        async function submitReraiseIssue(e) {
+            e.preventDefault();
+            const originalId = document.getElementById('reraiseProblemId').value;
+            const description = document.getElementById('reraiseDescription').value;
+            const priority = document.getElementById('reraisePriority').value;
+            // Find original problem to copy department + location
+            const original = problems.find(p => p.id === originalId);
+            if (!original) return showPopup('error', 'Original ticket not found.');
+            const formData = new FormData();
+            formData.append('department', original.department);
+            formData.append('priority', priority);
+            formData.append('description', `[Re-raised from ${originalId}] ${description}`);
+            formData.append('location', original.location);
+            try {
+                const headers = {};
+                if (apiToken) headers['Authorization'] = 'Bearer ' + apiToken;
+                const res = await fetch(API_BASE + '/problems', { method: 'POST', headers, body: formData });
+                if (!res.ok) { let err; try { err = (await res.json()).error; } catch(ex) { err = res.statusText; } throw new Error(err); }
+                const data = await res.json();
+                // Also submit negative feedback on original ticket
+                await apiFetch(`/problems/${originalId}/feedback`, 'PUT', { feedback: `Citizen reported problem NOT resolved. Re-raised as new ticket: ${data.id}` });
+                closeReraiseModal();
+                showPopup('success', `✅ New ticket ${data.id} created! Original ticket feedback updated.`);
+                await syncData(); loadCitizenProblems(); loadCitizenProfile();
+            } catch (err) { showPopup('error', err.message); }
         }
 
         function loadCitizenProblems() { 
@@ -378,16 +530,40 @@
             }
         }
         function loadCitizenProfile() {
-            document.getElementById('editCitName').value = currentUser.name; document.getElementById('editCitEmail').value = currentUser.email; document.getElementById('editCitMobile').value = currentUser.mobile; document.getElementById('editCitAddress').value = currentUser.address;
+            document.getElementById('editCitName').value = currentUser.name;
+            document.getElementById('editCitEmail').value = currentUser.email;
+            document.getElementById('editCitMobile').value = currentUser.mobile;
+            document.getElementById('editCitAddress').value = currentUser.address || '';
             const myProbs = problems.filter(p => p.citizen_id === currentUser.id);
             const pen = myProbs.filter(p => p.status === 'pending').length, prog = myProbs.filter(p => p.status === 'progress').length, comp = myProbs.filter(p => p.status === 'completed' || p.status === 'closed').length;
-            document.getElementById('totalReports').textContent = myProbs.length; document.getElementById('progressReports').textContent = prog; document.getElementById('completedReports').textContent = comp;
+            document.getElementById('totalReports').textContent = myProbs.length;
+            document.getElementById('progressReports').textContent = prog;
+            document.getElementById('completedReports').textContent = comp;
             renderStatusChart('citizenStatsChart', [pen, prog, comp], false);
+            filterCitizenHistory(currentCitizenHistoryFilter);
+        }
+
+        // ── Citizen history filter ────────────────────────────────────────────
+        function filterCitizenHistory(filter) {
+            currentCitizenHistoryFilter = filter;
+            const tabs = ['all', 'pending', 'progress', 'completed', 'closed'];
+            const idMap = { all: 'citHistAll', pending: 'citHistPending', progress: 'citHistProgress', completed: 'citHistCompleted', closed: 'citHistClosed' };
+            tabs.forEach(t => {
+                const el = document.getElementById(idMap[t]);
+                if (!el) return;
+                if (t === filter) {
+                    el.className = 'px-3 py-1.5 rounded-lg font-bold bg-white text-blue-600 shadow transition-all';
+                } else {
+                    el.className = 'px-3 py-1.5 rounded-lg font-bold text-slate-500 hover:text-slate-800 transition-all';
+                }
+            });
+            const myProbs = problems.filter(p => p.citizen_id === currentUser.id);
+            const list = filter === 'all' ? myProbs : myProbs.filter(p => p.status === filter);
             const container = document.getElementById('allCitizenProblems');
-            if(myProbs.length === 0) {
-                container.innerHTML = `<div class="p-12 text-center col-span-full bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200"><p class="text-slate-500 font-medium text-lg">You haven't submitted any tickets yet.</p></div>`;
+            if (list.length === 0) {
+                container.innerHTML = `<div class="p-12 text-center col-span-full bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200"><p class="text-slate-500 font-medium text-lg">No ${filter === 'all' ? '' : filter + ' '}tickets found.</p></div>`;
             } else {
-                container.innerHTML = myProbs.map(p => renderProblemCard(p, 'citizen')).join('');
+                container.innerHTML = list.map(p => renderProblemCard(p, 'citizen')).join('');
             }
         }
 
@@ -453,8 +629,69 @@
             if (section === 'overview') loadAdminOverview(); else if (section === 'users') loadAdminUsers(); else if (section === 'officials') loadAdminOfficials(); else if (section === 'feedbacks') loadAdminFeedbacks();
         }
         function loadAdminOverview() {
-            document.getElementById('adminStatCitizens').innerText = citizens.length; document.getElementById('adminStatOfficials').innerText = officials.length;
-            document.getElementById('adminStatTickets').innerText = problems.filter(p => p.status !== 'closed').length; document.getElementById('adminStatFeedbacks').innerText = problems.filter(p => p.feedback && p.status === 'completed').length;
+            document.getElementById('adminStatCitizens').innerText = citizens.length;
+            document.getElementById('adminStatOfficials').innerText = officials.length;
+            document.getElementById('adminStatTickets').innerText = problems.filter(p => p.status !== 'closed').length;
+            document.getElementById('adminStatFeedbacks').innerText = problems.filter(p => p.feedback && p.status === 'completed').length;
+
+            // ── Status counts ──
+            const pen = problems.filter(p => p.status === 'pending').length;
+            const prog = problems.filter(p => p.status === 'progress').length;
+            const comp = problems.filter(p => p.status === 'completed').length;
+            const closed = problems.filter(p => p.status === 'closed').length;
+            document.getElementById('adminCountPending').textContent = pen;
+            document.getElementById('adminCountProgress').textContent = prog;
+            document.getElementById('adminCountCompleted').textContent = comp;
+            document.getElementById('adminCountClosed').textContent = closed;
+
+            // ── Status Doughnut Chart ──
+            if (adminStatusChartInstance) adminStatusChartInstance.destroy();
+            const sCtx = document.getElementById('adminStatusChart').getContext('2d');
+            adminStatusChartInstance = new Chart(sCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pending', 'In Progress', 'Completed', 'Closed'],
+                    datasets: [{ data: [pen, prog, comp, closed], backgroundColor: ['#fbbf24', '#3b82f6', '#10b981', '#94a3b8'], borderWidth: 0 }]
+                },
+                options: { responsive: true, cutout: '72%', plugins: { legend: { display: false } } }
+            });
+
+            // ── Department Bar Chart ──
+            const deptMap = {};
+            const deptNames = { water:'Water', roads:'Roads', electricity:'Electricity', waste:'Waste Mgmt', parks:'Parks', health:'Health', drainage:'Drainage', transport:'Transport', fire:'Fire', building:'Building' };
+            problems.forEach(p => { deptMap[p.department] = (deptMap[p.department] || 0) + 1; });
+            const deptLabels = Object.keys(deptMap).map(k => deptNames[k] || k);
+            const deptData = Object.values(deptMap);
+            const barColors = ['#6366f1','#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316'];
+            if (adminDeptChartInstance) adminDeptChartInstance.destroy();
+            const dCtx = document.getElementById('adminDeptChart').getContext('2d');
+            adminDeptChartInstance = new Chart(dCtx, {
+                type: 'bar',
+                data: {
+                    labels: deptLabels,
+                    datasets: [{ label: 'Tickets', data: deptData, backgroundColor: barColors.slice(0, deptLabels.length), borderRadius: 8, borderSkipped: false }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // ── Recent Tickets Table (latest 8) ──
+            const statusColors = { pending: 'text-yellow-700 bg-yellow-100', progress: 'text-blue-700 bg-blue-100', completed: 'text-emerald-700 bg-emerald-100', closed: 'text-slate-600 bg-slate-100' };
+            const priorityColors = { low: 'text-slate-500', medium: 'text-amber-600', high: 'text-orange-600', urgent: 'text-red-600 font-bold' };
+            const recent = [...problems].sort((a, b) => new Date(b.date_reported) - new Date(a.date_reported)).slice(0, 8);
+            document.getElementById('adminRecentTickets').innerHTML = recent.length ? recent.map(p => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-2.5 pr-4 font-mono text-xs text-slate-500">${p.id}</td>
+                    <td class="py-2.5 pr-4 font-medium">${getDepartmentName(p.department)}</td>
+                    <td class="py-2.5 pr-4 text-xs ${priorityColors[p.priority] || ''} uppercase font-semibold">${p.priority}</td>
+                    <td class="py-2.5"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${statusColors[p.status] || ''} uppercase">${p.status}</span></td>
+                </tr>`).join('') : '<tr><td colspan="4" class="py-6 text-center text-slate-400">No tickets yet.</td></tr>';
         }
         function loadAdminUsers() { document.getElementById('adminCitizensList').innerHTML = citizens.map(c => `<tr><td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${c.id}</td><td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${c.name}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${c.email}</td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onclick="deleteUser('citizen', '${c.id}')" class="text-red-600 hover:text-red-900">Delete</button></td></tr>`).join(''); }
         function loadAdminOfficials() { document.getElementById('adminOfficialsList').innerHTML = officials.map(o => `<tr><td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${o.id}</td><td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${o.name}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${getDepartmentName(o.department)}</td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onclick="deleteUser('official', '${o.id}')" class="text-red-600 hover:text-red-900">Delete</button></td></tr>`).join(''); }
@@ -491,3 +728,212 @@
         });
 
         document.addEventListener('DOMContentLoaded', () => { initializeSampleData(); showUserTypeSelection(); });
+
+        // ══════════════════════════════════════════════════════════════════
+        //  🔔  NOTIFICATION BELL  (polls every 30 s for status changes)
+        // ══════════════════════════════════════════════════════════════════
+        let notifPollingInterval = null;
+        let lastKnownStatuses = {};
+        let notifLog = [];
+        let notifUnread = 0;
+
+        function updateNotificationSnapshot() {
+            if (!currentUser || currentUserType !== 'citizen') return;
+            problems.filter(p => p.citizen_id === currentUser.id).forEach(p => {
+                lastKnownStatuses[p.id] = p.status;
+            });
+        }
+
+        function startNotificationPolling() {
+            if (notifPollingInterval) return;
+            updateNotificationSnapshot();
+            notifPollingInterval = setInterval(async () => {
+                if (!apiToken || currentUserType !== 'citizen') return;
+                try {
+                    const fresh = await apiFetch('/problems');
+                    const myTickets = fresh.filter(p => p.citizen_id === currentUser.id);
+                    myTickets.forEach(p => {
+                        const prev = lastKnownStatuses[p.id];
+                        if (prev && prev !== p.status) {
+                            const statusLabels = { pending:'Pending', progress:'In Progress', completed:'Completed', closed:'Closed' };
+                            const msg = `Ticket ${p.id}: "${statusLabels[prev]||prev}" → "${statusLabels[p.status]||p.status}"`;
+                            notifLog.unshift({ id: p.id, msg, time: new Date() });
+                            notifUnread++;
+                            lastKnownStatuses[p.id] = p.status;
+                            showPopup('info', '🔔 ' + msg);
+                        } else if (!prev) {
+                            lastKnownStatuses[p.id] = p.status;
+                        }
+                    });
+                    problems = fresh;
+                    renderNotifBadge();
+                } catch (_) {}
+            }, 30000);
+        }
+
+        function stopNotificationPolling() {
+            if (notifPollingInterval) { clearInterval(notifPollingInterval); notifPollingInterval = null; }
+            notifUnread = 0; notifLog = []; lastKnownStatuses = {};
+            renderNotifBadge();
+        }
+
+        function renderNotifBadge() {
+            const badge = document.getElementById('notifBadge');
+            if (!badge) return;
+            if (notifUnread > 0) {
+                badge.textContent = notifUnread > 9 ? '9+' : notifUnread;
+                badge.classList.remove('hidden');
+            } else { badge.classList.add('hidden'); }
+        }
+
+        function toggleNotificationPanel() {
+            const panel = document.getElementById('notifPanel');
+            if (!panel) return;
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden')) renderNotifPanel();
+        }
+
+        function renderNotifPanel() {
+            const list = document.getElementById('notifList');
+            const empty = document.getElementById('notifEmpty');
+            if (!list) return;
+            if (notifLog.length === 0) {
+                list.innerHTML = '';
+                if (empty) empty.classList.remove('hidden');
+            } else {
+                if (empty) empty.classList.add('hidden');
+                list.innerHTML = notifLog.slice(0, 10).map(n => {
+                    const t = new Date(n.time).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+                    return `<li class="px-4 py-3 text-sm hover:bg-slate-50 cursor-default">
+                        <p class="text-slate-800 font-medium">🔔 ${n.msg}</p>
+                        <p class="text-slate-400 text-xs mt-0.5">${t}</p>
+                    </li>`;
+                }).join('');
+            }
+        }
+
+        function clearNotifications() {
+            notifUnread = 0; notifLog = [];
+            renderNotifBadge(); renderNotifPanel();
+            document.getElementById('notifPanel').classList.add('hidden');
+        }
+
+        document.addEventListener('click', e => {
+            if (!e.target.closest('#notifBellBtn') && !e.target.closest('#notifPanel')) {
+                const p = document.getElementById('notifPanel');
+                if (p) p.classList.add('hidden');
+            }
+        }, true);
+
+        // ══════════════════════════════════════════════════════════════════
+        //  🔍  CITIZEN SEARCH FILTER  (real-time keyword filter)
+        // ══════════════════════════════════════════════════════════════════
+        function searchCitizenProblems(query) {
+            const q = query.toLowerCase().trim();
+            const myProbs = problems.filter(p => p.citizen_id === currentUser.id);
+            const filtered = q ? myProbs.filter(p =>
+                (p.id && p.id.toLowerCase().includes(q)) ||
+                (p.description && p.description.toLowerCase().includes(q)) ||
+                (p.location && p.location.toLowerCase().includes(q)) ||
+                (getDepartmentName(p.department).toLowerCase().includes(q)) ||
+                (p.status && p.status.toLowerCase().includes(q))
+            ) : myProbs;
+            const container = document.getElementById('citizenProblems');
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="py-8 text-center text-slate-400 text-sm">No tickets match "${query}"</div>`;
+            } else {
+                container.innerHTML = filtered.slice(0, 10).map(p => renderProblemCard(p, 'citizen')).join('');
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        //  🖨️  PRINT TICKET  (modal preview + browser print)
+        // ══════════════════════════════════════════════════════════════════
+        function printTicket(id) {
+            const p = problems.find(x => x.id === id);
+            if (!p) return showPopup('error', 'Ticket not found');
+            const statusColors = { pending:'#f59e0b', progress:'#3b82f6', completed:'#10b981', closed:'#6b7280' };
+            const dateStr = p.date_reported ? new Date(p.date_reported).toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' }) : 'N/A';
+            const stars = p.rating ? ('⭐'.repeat(p.rating) + '☆'.repeat(5 - p.rating) + ` (${p.rating}/5)`) : 'Not yet rated';
+            const rows = [
+                ['Ticket ID', p.id], ['Department', getDepartmentName(p.department)],
+                ['Priority', p.priority.toUpperCase()], ['Location', p.location],
+                ['Description', p.description], ['Date Reported', dateStr],
+                ['Status', p.status.toUpperCase()], ['Citizen Rating', stars]
+            ];
+            document.getElementById('printTicketContent').innerHTML = `
+                <div style="border:2px solid #e2e8f0;border-radius:12px;padding:20px;background:#f8fafc;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <div>
+                            <p style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;margin:0;">SmartConnect Municipal Portal</p>
+                            <p style="font-size:18px;font-weight:700;color:#1e293b;margin:4px 0 0;">Ticket Receipt</p>
+                        </div>
+                        <span style="background:${statusColors[p.status]||'#94a3b8'};color:#fff;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700;">${p.status.toUpperCase()}</span>
+                    </div>
+                    <hr style="border:none;border-top:1px solid #e2e8f0;margin:12px 0;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        ${rows.map(([l,v]) => `<tr><td style="padding:5px 0;color:#64748b;width:130px;vertical-align:top;">${l}</td><td style="padding:5px 0;font-weight:600;color:#1e293b;">${v}</td></tr>`).join('')}
+                    </table>
+                </div>`;
+            document.getElementById('printModal').classList.remove('hidden');
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        //  🗺️  LIVE ISSUE MAP  (Leaflet + color-coded markers)
+        // ══════════════════════════════════════════════════════════════════
+        let liveMapInstance = null;
+        const markerColors = { pending:'#fbbf24', progress:'#3b82f6', completed:'#10b981', closed:'#94a3b8' };
+
+        function openMapViewModal() {
+            document.getElementById('mapViewModal').classList.remove('hidden');
+            setTimeout(showLiveIssueMap, 250);
+        }
+        function closeMapViewModal() {
+            document.getElementById('mapViewModal').classList.add('hidden');
+        }
+
+        function showLiveIssueMap() {
+            const mapDiv = document.getElementById('liveIssueMap');
+            if (!mapDiv) return;
+            // Destroy previous instance so Leaflet doesn't complain about re-init
+            if (liveMapInstance) { liveMapInstance.remove(); liveMapInstance = null; }
+
+            const pinned = problems.filter(p => p.lat && p.lng);
+            const center = pinned.length > 0 ? [pinned[0].lat, pinned[0].lng] : [20.5937, 78.9629];
+            const zoom = pinned.length > 0 ? 12 : 5;
+
+            liveMapInstance = L.map(mapDiv).setView(center, zoom);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors', maxZoom: 19
+            }).addTo(liveMapInstance);
+
+            if (pinned.length === 0) {
+                const el = document.querySelector('#mapViewModal .text-xs.text-slate-400');
+                if (el) el.textContent = 'No tickets with GPS coordinates yet — new tickets submitted with the map picker will appear here.';
+                return;
+            }
+
+            pinned.forEach(p => {
+                const color = markerColors[p.status] || '#94a3b8';
+                const icon = L.divIcon({
+                    html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
+                    className: '', iconAnchor: [7, 7]
+                });
+                const dateStr = p.date_reported ? new Date(p.date_reported).toLocaleDateString('en-IN') : '';
+                L.marker([p.lat, p.lng], { icon }).addTo(liveMapInstance).bindPopup(`
+                    <div style="font-family:sans-serif;min-width:190px;padding:4px;">
+                        <p style="font-weight:700;font-size:13px;margin:0 0 5px;color:#1e293b;">${p.id}</p>
+                        <p style="font-size:12px;color:#475569;margin:0 0 2px;">🏢 ${getDepartmentName(p.department)}</p>
+                        <p style="font-size:12px;color:#475569;margin:0 0 2px;">⚡ ${p.priority.toUpperCase()} priority</p>
+                        <p style="font-size:11px;color:#94a3b8;margin:0 0 6px;">📅 ${dateStr}</p>
+                        <span style="background:${color};color:#fff;padding:2px 10px;border-radius:9999px;font-size:11px;font-weight:700;">${p.status.toUpperCase()}</span>
+                    </div>`);
+            });
+
+            const group = L.featureGroup(pinned.map(p => L.marker([p.lat, p.lng])));
+            liveMapInstance.fitBounds(group.getBounds().pad(0.2));
+
+            const infoEl = document.querySelector('#mapViewModal .text-xs.text-slate-400');
+            const noPins = problems.length - pinned.length;
+            if (infoEl) infoEl.textContent = `${pinned.length} ticket${pinned.length !== 1 ? 's' : ''} on map${noPins ? ` • ${noPins} without GPS` : ''} — click a pin to view details`;
+        }

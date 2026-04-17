@@ -17,12 +17,16 @@ const userRoutes = require('./routes/users');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ── Security headers ──────────────────────────────────────────
+app.disable('x-powered-by'); // Don't expose Express in response headers
+
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true }));
+// Reduce body size limit — images go via multipart/form-data (multer), not JSON base64
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Serve static assets out of the public directory
-app.use(express.static('public')); 
+app.use(express.static('public'));
 
 // Serve the uploads directory for the multer images
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
@@ -37,10 +41,15 @@ app.use('/api/auth', authRoutes);
 app.use('/api/problems', problemRoutes);
 app.use('/api/users', userRoutes);
 
+// ── Global error handler (catches multer / unexpected errors) ──
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err.message);
+    res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
+});
+
 // ── Kick off ─────────────────────────────────────────────────
 async function startServer() {
     await initDB();
-
     app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
 }
 

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_key';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) { console.error('FATAL: JWT_SECRET env var is not set!'); process.exit(1); }
 
 const authenticateToken = (req, res, next) => {
     const token = (req.headers['authorization'] || '').split(' ')[1];

@@ -42,12 +42,16 @@ const problemSchema = new mongoose.Schema({
     priority: { type: String, required: true },
     description: { type: String, required: true },
     location: { type: String, required: true },
+    lat: { type: Number, default: null },  // GPS latitude from map picker
+    lng: { type: Number, default: null },  // GPS longitude from map picker
     status: { type: String, default: 'pending' },
     assigned_to: { type: String },
     image_data: { type: String },
     proof_image: { type: String },
     feedback: { type: String },
-    date_reported: { type: Date, default: Date.now }
+    rating: { type: Number, min: 1, max: 5, default: null },
+    date_reported: { type: Date, default: Date.now },
+    updated_at: { type: Date, default: Date.now }
 });
 
 const Citizen = mongoose.model('Citizen', citizenSchema);

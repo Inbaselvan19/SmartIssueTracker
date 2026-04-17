@@ -237,3 +237,37 @@ h1, h2, h3, h4, h5, h6 {
     /* Card grids fallback */
     .glass-card { border-radius: 16px !important; }
 }
+
+/* ═══════════════════════════════════════════
+   PRINT MEDIA QUERY FOR TICKETS
+   ═══════════════════════════════════════════ */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #printModal, #printModal * {
+        visibility: visible;
+    }
+    #printModal {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent !important;
+        backdrop-filter: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+    }
+    #printModal > div {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    #printModal button, #printModal p.mt-1, #printModal h2 {
+        display: none !important;
+    }
+}
