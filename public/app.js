@@ -15,7 +15,8 @@
         let selectedRatingValue = 0;
         let currentCitizenHistoryFilter = 'all';
 
-        const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api';
+        const SERVER_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000' : '';
+        const API_BASE = SERVER_BASE + '/api';
 
         async function apiFetch(endpoint, method = 'GET', body = null) {
             const headers = { 'Content-Type': 'application/json' };
@@ -374,7 +375,13 @@
         function renderProblemCard(problem, role = 'citizen') {
             const isOfficial = role === 'official', isAdmin = role === 'admin';
             const colors = { pending: 'bg-yellow-100 text-yellow-800', progress: 'bg-blue-100 text-blue-800', completed: 'bg-emerald-100 text-emerald-800', closed: 'bg-slate-200 text-slate-800', low: 'text-slate-500', medium: 'text-amber-600', high: 'text-orange-600', urgent: 'text-red-600 font-bold' };
-            const proofHtml = problem.proof_image ? `<div class="mt-3 mb-3 rounded-xl overflow-hidden border-2 border-emerald-200 relative"><div class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-1 absolute top-0 left-0 rounded-br-lg">Official Proof</div><img src="${problem.proof_image}" class="w-full h-32 object-cover"></div>` : '';
+            
+            let imgUrl = problem.image_data;
+            if (imgUrl && imgUrl.startsWith('/')) imgUrl = SERVER_BASE + imgUrl;
+            let proofUrlStr = problem.proof_image;
+            if (proofUrlStr && proofUrlStr.startsWith('/')) proofUrlStr = SERVER_BASE + proofUrlStr;
+
+            const proofHtml = proofUrlStr ? `<div class="mt-3 mb-3 rounded-xl overflow-hidden border-2 border-emerald-200 relative"><div class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-1 absolute top-0 left-0 rounded-br-lg">Official Proof</div><img src="${proofUrlStr}" class="w-full h-32 object-cover"></div>` : '';
             const ratingHtml = problem.rating ? `<div class="flex items-center space-x-1 mt-1">${'⭐'.repeat(problem.rating)}${'☆'.repeat(5 - problem.rating)} <span class="text-xs text-slate-400 ml-1">${problem.rating}/5</span></div>` : '';
             const dateStr = problem.date_reported ? new Date(problem.date_reported).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
             const isOverdue = problem.status === 'pending' && (Date.now() - new Date(problem.date_reported)) > 7 * 24 * 60 * 60 * 1000;
@@ -416,7 +423,7 @@
                             ${printBtn}
                         </div>
                     </div>
-                    ${problem.image_data ? `<img src="${problem.image_data}" class="w-full h-32 object-cover rounded-lg mb-3">` : ''}
+                    ${imgUrl ? `<img src="${imgUrl}" class="w-full h-32 object-cover rounded-lg mb-3">` : ''}
                     ${proofHtml}
                     <div class="mb-3"><span class="text-sm font-bold">${getDepartmentName(problem.department)}</span> <span class="text-xs float-right ${colors[problem.priority]} uppercase">${problem.priority}</span></div>
                     <div class="flex-grow space-y-1"><p class="text-sm text-slate-600">📍 ${problem.location}</p><p class="text-sm text-slate-500 line-clamp-2">${problem.description}</p></div>
@@ -731,7 +738,7 @@
         document.addEventListener('DOMContentLoaded', () => { initializeSampleData(); showUserTypeSelection(); });
 
         // ══════════════════════════════════════════════════════════════════
-        //  🔔  NOTIFICATION BELL  (polls every 30 s for status changes)
+        //  🔔  NOTIFICATION BELL  (polls every 30 s + offline history sync)
         // ══════════════════════════════════════════════════════════════════
         let notifPollingInterval = null;
         let lastKnownStatuses = {};
@@ -740,34 +747,53 @@
 
         function updateNotificationSnapshot() {
             if (!currentUser || currentUserType !== 'citizen') return;
+            let changed = false;
             problems.filter(p => p.citizen_id === currentUser.id).forEach(p => {
-                lastKnownStatuses[p.id] = p.status;
+                const prev = lastKnownStatuses[p.id];
+                if (prev && prev !== p.status) {
+                    const statusLabels = { pending:'Pending', progress:'In Progress', completed:'Completed', closed:'Closed' };
+                    const msg = `Ticket ${p.id}: "${statusLabels[prev]||prev}" → "${statusLabels[p.status]||p.status}"`;
+                    notifLog.unshift({ id: p.id, msg, time: new Date() });
+                    notifUnread++;
+                    lastKnownStatuses[p.id] = p.status;
+                    showPopup('info', '🔔 ' + msg);
+                    changed = true;
+                } else if (!prev) {
+                    lastKnownStatuses[p.id] = p.status;
+                    changed = true;
+                }
             });
+            if (changed) {
+                renderNotifBadge();
+                localStorage.setItem('notifState_' + currentUser.id, JSON.stringify({
+                    statuses: lastKnownStatuses, log: notifLog, unread: notifUnread
+                }));
+            }
         }
 
         function startNotificationPolling() {
             if (notifPollingInterval) return;
+            
+            // Restore history from localStorage
+            if (currentUser && currentUserType === 'citizen') {
+                const saved = localStorage.getItem('notifState_' + currentUser.id);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    lastKnownStatuses = parsed.statuses || {};
+                    notifLog = parsed.log || [];
+                    notifUnread = parsed.unread || 0;
+                    renderNotifBadge();
+                }
+            }
+            
             updateNotificationSnapshot();
+            
             notifPollingInterval = setInterval(async () => {
                 if (!apiToken || currentUserType !== 'citizen') return;
                 try {
                     const fresh = await apiFetch('/problems');
-                    const myTickets = fresh.filter(p => p.citizen_id === currentUser.id);
-                    myTickets.forEach(p => {
-                        const prev = lastKnownStatuses[p.id];
-                        if (prev && prev !== p.status) {
-                            const statusLabels = { pending:'Pending', progress:'In Progress', completed:'Completed', closed:'Closed' };
-                            const msg = `Ticket ${p.id}: "${statusLabels[prev]||prev}" → "${statusLabels[p.status]||p.status}"`;
-                            notifLog.unshift({ id: p.id, msg, time: new Date() });
-                            notifUnread++;
-                            lastKnownStatuses[p.id] = p.status;
-                            showPopup('info', '🔔 ' + msg);
-                        } else if (!prev) {
-                            lastKnownStatuses[p.id] = p.status;
-                        }
-                    });
                     problems = fresh;
-                    renderNotifBadge();
+                    updateNotificationSnapshot();
                 } catch (_) {}
             }, 30000);
         }
@@ -815,6 +841,11 @@
 
         function clearNotifications() {
             notifUnread = 0; notifLog = [];
+            if (currentUser) {
+                localStorage.setItem('notifState_' + currentUser.id, JSON.stringify({
+                    statuses: lastKnownStatuses, log: notifLog, unread: notifUnread
+                }));
+            }
             renderNotifBadge(); renderNotifPanel();
             document.getElementById('notifPanel').classList.add('hidden');
         }
