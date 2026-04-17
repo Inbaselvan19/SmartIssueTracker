@@ -89,7 +89,14 @@ router.put('/:id/status', authenticateToken, upload.single('proofImage'), async 
         if (req.user.type === 'official') {
             const problem = await Problem.findOne({ id: req.params.id });
             if (!problem) return res.status(404).json({ error: 'Ticket not found' });
-            if (problem.department !== req.user.department) {
+            
+            let userDept = req.user.department;
+            if (!userDept) {
+                const off = await Official.findOne({ id: req.user.id });
+                if (off) userDept = off.department;
+            }
+
+            if (problem.department !== userDept) {
                 return res.status(403).json({ error: 'You can only update tickets in your department' });
             }
         }

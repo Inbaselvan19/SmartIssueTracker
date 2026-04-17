@@ -617,7 +617,8 @@
             try { 
                 const headers = {};
                 if (apiToken) headers['Authorization'] = 'Bearer ' + apiToken;
-                await fetch(API_BASE + `/problems/${id}/status`, { method: 'PUT', headers, body: formData });
+                const res = await fetch(API_BASE + `/problems/${id}/status`, { method: 'PUT', headers, body: formData });
+                if (!res.ok) { let err; try { err = (await res.json()).error; } catch(e) { err = res.statusText; } throw new Error(err); }
                 closeStatusUpdate(); await syncData(); loadOfficialProblems(); showPopup('success', 'Updated'); 
             } catch (err) { showPopup('error', err.message); }
         }

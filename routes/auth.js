@@ -71,7 +71,9 @@ router.post('/login', async (req, res) => {
             const user = { ...userRow };
             delete user.password_hash;
             user.type = type;
-            const token = jwt.sign({ id: user.id, type }, JWT_SECRET, { expiresIn: '7d' });
+            const payload = { id: user.id, type };
+            if (type === 'official') payload.department = user.department;
+            const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
             return res.json({ token, user });
         }
         res.status(401).json({ error: 'Invalid credentials' });
