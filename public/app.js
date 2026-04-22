@@ -192,6 +192,7 @@
                 document.getElementById('officialHeaderDept').textContent = getDepartmentName(currentUser.department) + ' Portal';
                 hideAllSections(); document.getElementById('officialDashboard').classList.remove('hidden');
                 await syncData(); loadOfficialProblems(); showPopup('success', 'Logged in');
+                startOfficialNotificationPolling();
             } catch (e) { showPopup('error', e.message); }
         }
 
@@ -217,9 +218,10 @@
         }
         function logout() {
             stopNotificationPolling();
+            stopOfficialNotificationPolling();
             currentUser = null; currentUserType = null; apiToken = null;
             problems = []; citizens = []; officials = [];
-            lastKnownStatuses = {};
+            lastKnownStatuses = {}; offLastKnownStatuses = {};
             showUserTypeSelection();
         }
 
@@ -417,6 +419,10 @@
                 if (problem.rating) {
                     feedbackHtml += `<div class="mt-3 p-2 bg-slate-50 rounded-lg text-sm font-bold text-slate-600 flex justify-between"><span>Experience Rating:</span> <span>${'⭐'.repeat(problem.rating)}</span></div>`;
                 }
+            }
+            // "View Messages" button — shown for all roles if there's feedback
+            if (problem.feedback) {
+                feedbackHtml += `<div class="mt-2"><button onclick="openMsgHistory('${problem.id}')" class="w-full bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold py-2 rounded-lg transition border border-purple-200 text-sm">💬 View Message History</button></div>`;
             }
             let adminActionHtml = '';
             if (isAdmin && problem.feedback) adminActionHtml = `<div class="mt-4 pt-3 border-t flex space-x-2"><button onclick="approveAndClose('${problem.id}')" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg hover:bg-emerald-700 transition shadow-sm text-sm">Approve & Close</button><button onclick="reassignToOfficial('${problem.id}')" class="flex-1 bg-amber-500 text-white font-bold py-2 rounded-lg hover:bg-amber-600 transition shadow-sm text-sm">Reassign</button></div>`;
@@ -731,6 +737,12 @@
         let notifLog = [];
         let notifUnread = 0;
 
+        // ── Official Notification State ──────────────────────────────────────
+        let offNotifPollingInterval = null;
+        let offLastKnownStatuses = {}; // ticketId → { status, feedbackLen }
+        let offNotifLog = [];
+        let offNotifUnread = 0;
+
         function updateNotificationSnapshot() {
             if (!currentUser || currentUserType !== 'citizen') return;
             let changed = false;
@@ -789,6 +801,140 @@
             notifUnread = 0; notifLog = []; lastKnownStatuses = {};
             renderNotifBadge();
         }
+
+        // ══════════════════════════════════════════════════════════════════
+        //  🔔  OFFICIAL NOTIFICATION SYSTEM
+        // ══════════════════════════════════════════════════════════════════
+        function updateOfficialNotificationSnapshot() {
+            if (!currentUser || currentUserType !== 'official') return;
+            let changed = false;
+            const myTickets = problems.filter(p => p.assigned_to === currentUser.id || (!p.assigned_to && p.department === currentUser.department));
+            myTickets.forEach(p => {
+                const prev = offLastKnownStatuses[p.id];
+                const feedbackLen = p.feedback ? p.feedback.length : 0;
+                if (!prev) {
+                    offLastKnownStatuses[p.id] = { status: p.status, feedbackLen };
+                    changed = true;
+                } else {
+                    // New ticket assigned (status change)
+                    if (prev.status !== p.status) {
+                        const statusLabels = { pending:'Pending', progress:'In Progress', completed:'Completed', closed:'Closed' };
+                        const msg = `Ticket ${p.id} status changed: "${statusLabels[prev.status]||prev.status}" → "${statusLabels[p.status]||p.status}"`;
+                        offNotifLog.unshift({ id: p.id, msg, time: new Date(), type: 'status' });
+                        offNotifUnread++;
+                        offLastKnownStatuses[p.id].status = p.status;
+                        showPopup('info', '🔔 ' + msg);
+                        changed = true;
+                    }
+                    // Citizen feedback received
+                    if (feedbackLen > prev.feedbackLen) {
+                        const msg = `Citizen replied on Ticket ${p.id} — new message received.`;
+                        offNotifLog.unshift({ id: p.id, msg, time: new Date(), type: 'feedback' });
+                        offNotifUnread++;
+                        offLastKnownStatuses[p.id].feedbackLen = feedbackLen;
+                        showPopup('info', '💬 ' + msg);
+                        changed = true;
+                    }
+                }
+            });
+            if (changed) {
+                renderOfficialNotifBadge();
+                localStorage.setItem('offNotifState_' + currentUser.id, JSON.stringify({
+                    statuses: offLastKnownStatuses, log: offNotifLog, unread: offNotifUnread
+                }));
+            }
+        }
+
+        function startOfficialNotificationPolling() {
+            if (offNotifPollingInterval) return;
+            if (currentUser && currentUserType === 'official') {
+                const saved = localStorage.getItem('offNotifState_' + currentUser.id);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    offLastKnownStatuses = parsed.statuses || {};
+                    offNotifLog = parsed.log || [];
+                    offNotifUnread = parsed.unread || 0;
+                    renderOfficialNotifBadge();
+                }
+            }
+            updateOfficialNotificationSnapshot();
+            offNotifPollingInterval = setInterval(async () => {
+                if (!apiToken || currentUserType !== 'official') return;
+                try {
+                    const fresh = await apiFetch('/problems');
+                    problems = fresh;
+                    updateOfficialNotificationSnapshot();
+                } catch (_) {}
+            }, 30000);
+        }
+
+        function stopOfficialNotificationPolling() {
+            if (offNotifPollingInterval) { clearInterval(offNotifPollingInterval); offNotifPollingInterval = null; }
+            offNotifUnread = 0; offNotifLog = []; offLastKnownStatuses = {};
+            renderOfficialNotifBadge();
+        }
+
+        function renderOfficialNotifBadge() {
+            const badge = document.getElementById('offNotifBadge');
+            const badgeMob = document.getElementById('offNotifBadgeMobile');
+            if (badge) {
+                if (offNotifUnread > 0) {
+                    badge.textContent = offNotifUnread > 9 ? '9+' : offNotifUnread;
+                    badge.classList.remove('hidden');
+                } else { badge.classList.add('hidden'); }
+            }
+            if (badgeMob) {
+                if (offNotifUnread > 0) {
+                    badgeMob.textContent = offNotifUnread > 9 ? '9+' : offNotifUnread;
+                    badgeMob.classList.remove('hidden');
+                } else { badgeMob.classList.add('hidden'); }
+            }
+        }
+
+        function toggleOfficialNotificationPanel() {
+            const panel = document.getElementById('offNotifPanel');
+            if (!panel) return;
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden')) renderOfficialNotifPanel();
+        }
+
+        function renderOfficialNotifPanel() {
+            const list = document.getElementById('offNotifList');
+            const empty = document.getElementById('offNotifEmpty');
+            if (!list) return;
+            if (offNotifLog.length === 0) {
+                list.innerHTML = '';
+                if (empty) empty.classList.remove('hidden');
+            } else {
+                if (empty) empty.classList.add('hidden');
+                list.innerHTML = offNotifLog.slice(0, 10).map(n => {
+                    const t = new Date(n.time).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+                    const icon = n.type === 'feedback' ? '💬' : '🔔';
+                    return `<li class="px-4 py-3 text-sm hover:bg-slate-50 cursor-pointer" onclick="openMsgHistory('${n.id}')">` +
+                        `<p class="text-slate-800 font-medium">${icon} ${n.msg}</p>` +
+                        `<p class="text-slate-400 text-xs mt-0.5">${t} — click to view thread</p>` +
+                        `</li>`;
+                }).join('');
+            }
+        }
+
+        function clearOfficialNotifications() {
+            offNotifUnread = 0; offNotifLog = [];
+            if (currentUser) {
+                localStorage.setItem('offNotifState_' + currentUser.id, JSON.stringify({
+                    statuses: offLastKnownStatuses, log: offNotifLog, unread: offNotifUnread
+                }));
+            }
+            renderOfficialNotifBadge(); renderOfficialNotifPanel();
+            document.getElementById('offNotifPanel').classList.add('hidden');
+        }
+
+        document.addEventListener('click', e => {
+            if (!e.target.closest('#offNotifBellBtn') && !e.target.closest('#offNotifPanel')) {
+                const p = document.getElementById('offNotifPanel');
+                if (p) p.classList.add('hidden');
+            }
+        }, true);
 
         function renderNotifBadge() {
             const badge = document.getElementById('notifBadge');
@@ -862,6 +1008,58 @@
             } else {
                 container.innerHTML = filtered.slice(0, 10).map(p => renderProblemCard(p, 'citizen')).join('');
             }
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        //  💬  MESSAGE HISTORY MODAL  (chat-bubble thread viewer)
+        // ══════════════════════════════════════════════════════════════════
+        function openMsgHistory(id) {
+            const p = problems.find(x => x.id === id);
+            if (!p) return showPopup('error', 'Ticket not found');
+            document.getElementById('msgHistoryTicketId').textContent = `Ticket ID: ${p.id} • ${getDepartmentName(p.department)}`;
+            const body = document.getElementById('msgHistoryBody');
+            if (!p.feedback || p.feedback.trim() === '') {
+                body.innerHTML = `<div class="py-10 text-center text-slate-400 text-sm">No messages yet for this ticket.</div>`;
+            } else {
+                // Parse feedback string into message objects
+                // Format: "[Role]: message" separated by newlines or concatenated
+                const raw = p.feedback;
+                // Split on known prefixes
+                const parts = raw.split(/(?=\[(?:Citizen|Admin)[^\]]*\]:)/g).filter(s => s.trim());
+                body.innerHTML = parts.map(part => {
+                    part = part.trim();
+                    const isCitizen = part.startsWith('[Citizen]');
+                    const isAdmin = part.startsWith('[Admin');
+                    let label = '', text = part, badgeColor = '';
+                    if (isCitizen) {
+                        const m = part.match(/^\[Citizen\]:\s*([\s\S]*)/);
+                        label = 'Citizen'; text = m ? m[1].trim() : part;
+                        badgeColor = 'bg-blue-100 text-blue-800';
+                    } else if (isAdmin) {
+                        const m = part.match(/^\[Admin[^\]]*\]:\s*([\s\S]*)/);
+                        const tagM = part.match(/^\[Admin([^\]]*)\]/);
+                        label = 'Admin' + (tagM && tagM[1] ? tagM[1] : '');
+                        text = m ? m[1].trim() : part;
+                        badgeColor = 'bg-amber-100 text-amber-800';
+                    } else {
+                        // System/Official message
+                        label = 'System'; text = part;
+                        badgeColor = 'bg-slate-100 text-slate-600';
+                    }
+                    const align = isCitizen ? 'items-end' : 'items-start';
+                    const bubble = isCitizen
+                        ? 'bg-blue-600 text-white rounded-2xl rounded-br-sm'
+                        : isAdmin
+                            ? 'bg-amber-50 border border-amber-200 text-slate-800 rounded-2xl rounded-bl-sm'
+                            : 'bg-slate-100 text-slate-700 rounded-2xl rounded-bl-sm';
+                    if (!text) return '';
+                    return `<div class="flex flex-col ${align} gap-1">
+                        <span class="text-xs font-bold px-2 py-0.5 rounded-full ${badgeColor}">${label}</span>
+                        <div class="max-w-[85%] px-4 py-2.5 text-sm ${bubble} shadow-sm whitespace-pre-wrap">${text}</div>
+                    </div>`;
+                }).join('');
+            }
+            document.getElementById('msgHistoryModal').classList.remove('hidden');
         }
 
         // ══════════════════════════════════════════════════════════════════

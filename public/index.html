@@ -550,6 +550,22 @@
                         <button onclick="showOfficialSection('problems')" class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-slate-800 transition">Tickets</button>
                         <button onclick="showOfficialSection('profile')" class="text-slate-300 hover:text-white font-medium px-3 py-2 rounded-lg hover:bg-slate-800 transition">Profile</button>
                         <div class="h-6 w-px bg-slate-700 mx-2"></div>
+                        <!-- Official Notification Bell -->
+                        <div class="relative">
+                            <button onclick="toggleOfficialNotificationPanel()" id="offNotifBellBtn" class="relative p-2 rounded-full hover:bg-slate-700 transition" title="Notifications">
+                                <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                                <span id="offNotifBadge" class="hidden absolute -top-0.5 -right-0.5 w-4 h-4 bg-emerald-400 rounded-full text-white text-xs flex items-center justify-center font-bold">0</span>
+                            </button>
+                            <!-- Official Notification dropdown -->
+                            <div id="offNotifPanel" class="hidden absolute right-0 top-12 w-80 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden" style="background: #ffffff !important; backdrop-filter: none !important;">
+                                <div class="flex items-center justify-between px-4 py-3 border-b bg-slate-900">
+                                    <span class="font-bold text-white text-sm">🔔 Official Notifications</span>
+                                    <button onclick="clearOfficialNotifications()" class="text-xs text-emerald-400 hover:underline">Mark all read</button>
+                                </div>
+                                <ul id="offNotifList" class="max-h-64 overflow-y-auto divide-y divide-slate-50"></ul>
+                                <div id="offNotifEmpty" class="p-6 text-center text-slate-400 text-sm">No new notifications</div>
+                            </div>
+                        </div>
                         <button onclick="logout()" class="text-red-400 hover:text-red-300 p-2 rounded-full hover:bg-slate-800 transition" title="Logout">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                         </button>
@@ -564,6 +580,7 @@
             <div id="officialMobileNav" class="nav-links-mobile">
                 <button onclick="showOfficialSection('problems');closeMobileNav('officialMobileNav')" class="text-slate-300 hover:bg-slate-800 hover:text-white">🎫 Tickets</button>
                 <button onclick="showOfficialSection('profile');closeMobileNav('officialMobileNav')" class="text-slate-300 hover:bg-slate-800 hover:text-white">👤 Profile</button>
+                <button onclick="toggleOfficialNotificationPanel()" class="text-slate-300 hover:bg-slate-800 hover:text-white">🔔 Notifications <span id="offNotifBadgeMobile" class="hidden ml-1 px-1.5 py-0.5 bg-emerald-400 text-white text-xs rounded-full font-bold"></span></button>
                 <button onclick="logout()" class="text-red-400 hover:bg-slate-800">🚪 Logout</button>
             </div>
         </nav>
@@ -1045,6 +1062,20 @@
         </div>
     </div>
 
+
+    <!-- ══ Message History Modal ══ -->
+    <div id="msgHistoryModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col fade-in" style="max-height:85vh">
+            <div class="flex items-center justify-between px-6 py-4 border-b">
+                <div>
+                    <h2 class="text-xl font-extrabold text-slate-800">💬 Message History</h2>
+                    <p id="msgHistoryTicketId" class="text-xs text-slate-400 mt-0.5"></p>
+                </div>
+                <button onclick="document.getElementById('msgHistoryModal').classList.add('hidden')" class="text-slate-400 hover:text-red-500 transition text-2xl leading-none">&times;</button>
+            </div>
+            <div id="msgHistoryBody" class="flex-1 overflow-y-auto px-6 py-4 space-y-3"></div>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>
