@@ -3,25 +3,13 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { Problem, Citizen } = require('../db');
+const { Problem, Citizen, Official } = require('../db');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const { sendTicketSubmittedEmail, sendStatusUpdateEmail, sendAdminActionEmail } = require('../services/emailService');
 
-// Multer Setup for handling file uploads (Local storage instead of LONGTEXT in DB)
-const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
-});
+// Multer Setup for handling file uploads
+// Using memory storage to save images as Base64 in MongoDB instead of local files (fixes broken images on Render)
+const storage = multer.memoryStorage();
 
 // Only allow real image MIME types — blocks disguised file uploads
 const fileFilter = (req, file, cb) => {
@@ -41,7 +29,8 @@ router.post('/', authenticateToken, upload.single('image'), async (req, res) => 
     let imageUrl = null;
 
     if (req.file) {
-        imageUrl = `/uploads/${req.file.filename}`;
+        const b64 = Buffer.from(req.file.buffer).toString('base64');
+        imageUrl = `data:${req.file.mimetype};base64,${b64}`;
     } else if (req.body.imageData) {
         imageUrl = req.body.imageData;
     }
@@ -49,8 +38,45 @@ router.post('/', authenticateToken, upload.single('image'), async (req, res) => 
     const id = 'PRB-' + Math.floor(100000 + Math.random() * 900000);
 
     try {
+        // Load balancing: assign to the official with the least active problems in the department
+        const officialsInDept = await Official.find({ department }).lean();
+        let assignedTo = null;
+
+        if (officialsInDept.length > 0) {
+            const activeProblems = await Problem.find({ 
+                department, 
+                status: { $nin: ['completed', 'closed'] } 
+            }).lean();
+
+            const loadCount = {};
+            officialsInDept.forEach(o => loadCount[o.id] = 0);
+            activeProblems.forEach(p => {
+                if (p.assigned_to && loadCount[p.assigned_to] !== undefined) {
+                    loadCount[p.assigned_to]++;
+                }
+            });
+
+            let minOfficialId = officialsInDept[0].id;
+            let minLoad = loadCount[minOfficialId];
+
+            for (let i = 1; i < officialsInDept.length; i++) {
+                const offId = officialsInDept[i].id;
+                if (loadCount[offId] < minLoad) {
+                    minLoad = loadCount[offId];
+                    minOfficialId = offId;
+                }
+            }
+
+            // Only auto-assign if the least-burdened official has fewer than 5 active problems
+            if (minLoad < 5) {
+                assignedTo = minOfficialId;
+            } else {
+                assignedTo = null; // Stays unassigned if all officials in the department are at capacity
+            }
+        }
+
         await Problem.create({
-            id, citizen_id: req.user.id, department, priority, description, location, lat, lng, image_data: imageUrl
+            id, citizen_id: req.user.id, department, priority, description, location, lat, lng, image_data: imageUrl, assigned_to: assignedTo
         });
         res.status(201).json({ message: 'Ticket created successfully', id });
 
@@ -79,7 +105,8 @@ router.put('/:id/status', authenticateToken, upload.single('proofImage'), async 
     let proofUrl = null;
     
     if (req.file) {
-        proofUrl = `/uploads/${req.file.filename}`;
+        const b64 = Buffer.from(req.file.buffer).toString('base64');
+        proofUrl = `data:${req.file.mimetype};base64,${b64}`;
     } else if (req.body.proofImage) {
         proofUrl = req.body.proofImage;
     }
@@ -122,12 +149,6 @@ router.put('/:id/status', authenticateToken, upload.single('proofImage'), async 
 
 router.put('/:id/feedback', authenticateToken, async (req, res) => {
     const { feedback, rating } = req.body;
-    if (!feedback || typeof feedback !== 'string' || feedback.trim().length === 0) {
-        return res.status(400).json({ error: 'Feedback text is required' });
-    }
-    if (rating !== undefined && (typeof rating !== 'number' || rating < 1 || rating > 5)) {
-        return res.status(400).json({ error: 'Rating must be a number between 1 and 5' });
-    }
     try {
         // 🔒 Only the citizen who owns this ticket can submit feedback
         const problem = await Problem.findOne({ id: req.params.id });
@@ -135,8 +156,16 @@ router.put('/:id/feedback', authenticateToken, async (req, res) => {
         if (req.user.type === 'citizen' && problem.citizen_id !== req.user.id) {
             return res.status(403).json({ error: 'You can only submit feedback on your own tickets' });
         }
-        const updates = { feedback: feedback.trim(), updated_at: new Date() };
-        if (rating) updates.rating = rating;
+        
+        const updates = { updated_at: new Date() };
+        if (feedback && typeof feedback === 'string' && feedback.trim().length > 0) {
+            const prefix = problem.feedback ? problem.feedback + '\n[Citizen]: ' : '[Citizen]: ';
+            updates.feedback = prefix + feedback.trim();
+        }
+        if (rating !== undefined && rating >= 1 && rating <= 5) {
+            updates.rating = rating;
+        }
+        
         await Problem.updateOne({ id: req.params.id }, updates);
         res.json({ message: 'Feedback submitted' });
     } catch (err) {

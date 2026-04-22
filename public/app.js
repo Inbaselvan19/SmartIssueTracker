@@ -46,7 +46,11 @@
             }
         }
 
-        async function openCamera() {
+        let cameraContext = 'problem';
+        let capturedProofBlob = null;
+
+        async function openCamera(context = 'problem') {
+            cameraContext = context;
             const modal = document.getElementById('cameraModal');
             const video = document.getElementById('cameraVideo');
             const loading = document.getElementById('cameraLoading');
@@ -71,8 +75,13 @@
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d'); ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             canvas.toBlob((blob) => {
-                capturedImageBlob = blob; document.getElementById('previewImg').src = URL.createObjectURL(blob);
-                document.getElementById('imagePreview').classList.remove('hidden'); document.getElementById('problemImage').value = '';
+                if (cameraContext === 'problem') {
+                    capturedImageBlob = blob; document.getElementById('previewImg').src = URL.createObjectURL(blob);
+                    document.getElementById('imagePreview').classList.remove('hidden'); document.getElementById('problemImage').value = '';
+                } else {
+                    capturedProofBlob = blob; document.getElementById('proofPreviewImg').src = URL.createObjectURL(blob);
+                    document.getElementById('proofImagePreview').classList.remove('hidden'); document.getElementById('proofImage').value = '';
+                }
                 closeCamera(); showPopup('success', 'Photo captured successfully.');
             }, 'image/jpeg', 0.8);
         }
@@ -388,22 +397,25 @@
             const overdueBadge = isOverdue ? `<span class="ml-1 px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full border border-red-200 animate-pulse">⏰ Overdue</span>` : '';
             const printBtn = role === 'citizen' ? `<button onclick="printTicket('${problem.id}')" title="Print Ticket" class="text-slate-400 hover:text-blue-600 transition p-1 rounded">🖨️</button>` : '';
             let feedbackHtml = '';
-            // Detect if this ticket was reassigned (feedback contains [Admin: Re-evaluate]) and is now completed
-            const wasReassigned = problem.feedback && problem.feedback.includes('[Admin: Re-evaluate]');
-            if (problem.feedback) feedbackHtml = `<div class="mt-3 p-3 bg-purple-50 rounded-xl border border-purple-100"><p class="text-xs font-bold text-purple-800 mb-1">Citizen Feedback: ${ratingHtml}</p><p class="text-sm italic">"${problem.feedback}"</p></div>`;
-            else if (role === 'citizen' && problem.status === 'completed') {
-                if (wasReassigned) {
-                    // After reassignment → show satisfaction check instead of plain feedback
-                    feedbackHtml = `<div class="mt-3 pt-3 border-t space-y-2">
-                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-                            <p class="text-xs font-bold text-amber-700 mb-2">⚠️ This issue was previously reassigned. Is it now resolved?</p>
-                            <div class="flex space-x-2">
-                                <button onclick="openSatisfactionCheck('${problem.id}')" class="flex-1 bg-emerald-600 text-white text-xs font-bold py-2 rounded-lg hover:bg-emerald-700 transition">✅ Confirm Resolution</button>
-                            </div>
-                        </div>
-                    </div>`;
-                } else {
-                    feedbackHtml = `<div class="mt-3 pt-3 border-t"><button onclick="openFeedbackModal('${problem.id}')" class="text-sm text-blue-600 font-bold hover:underline">Leave Feedback for Admin</button></div>`;
+            
+            const lastFeedbackIndex = problem.feedback ? problem.feedback.lastIndexOf('[Citizen]:') : -1;
+            const lastAdminIndex = problem.feedback ? problem.feedback.lastIndexOf('[Admin: Re-evaluate]') : -1;
+            const needsCitizenConfirmation = problem.status === 'completed' && (!problem.feedback || lastAdminIndex > lastFeedbackIndex);
+            const canRateExperience = problem.status === 'closed' && !problem.rating;
+
+            if (problem.feedback) {
+                feedbackHtml += `<div class="mt-3 p-3 bg-purple-50 rounded-xl border border-purple-100"><p class="text-xs font-bold text-purple-800 mb-1">Feedback History:</p><p class="text-sm italic whitespace-pre-wrap">${problem.feedback}</p></div>`;
+            }
+
+            if (role === 'citizen') {
+                if (needsCitizenConfirmation) {
+                    feedbackHtml += `<div class="mt-3 pt-3 border-t"><button onclick="openFeedbackModal('${problem.id}')" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-2 rounded-lg transition border border-blue-200">Confirm Resolution & Leave Comment</button></div>`;
+                }
+                if (canRateExperience) {
+                    feedbackHtml += `<div class="mt-3 pt-3 border-t"><button onclick="openRatingModal('${problem.id}')" class="w-full bg-yellow-50 hover:bg-yellow-100 text-yellow-700 font-bold py-2 rounded-lg transition border border-yellow-200">⭐ Rate Your Experience</button></div>`;
+                }
+                if (problem.rating) {
+                    feedbackHtml += `<div class="mt-3 p-2 bg-slate-50 rounded-lg text-sm font-bold text-slate-600 flex justify-between"><span>Experience Rating:</span> <span>${'⭐'.repeat(problem.rating)}</span></div>`;
                 }
             }
             let adminActionHtml = '';
@@ -435,12 +447,17 @@
         function openFeedbackModal(id) {
             document.getElementById('feedbackProblemId').value = id;
             document.getElementById('feedbackText').value = '';
-            // Reset stars
-            selectedRatingValue = 0;
-            setRating(0);
             document.getElementById('feedbackModal').classList.remove('hidden');
         }
         function closeFeedbackModal() { document.getElementById('feedbackModal').classList.add('hidden'); }
+
+        function openRatingModal(id) {
+            document.getElementById('ratingProblemId').value = id;
+            selectedRatingValue = 0;
+            setRating(0);
+            document.getElementById('ratingModal').classList.remove('hidden');
+        }
+        function closeRatingModal() { document.getElementById('ratingModal').classList.add('hidden'); }
 
         // ── Star Rating ──────────────────────────────────────────────────────
         const ratingLabels = ['', 'Poor 😞', 'Fair 😐', 'Good 🙂', 'Very Good 😊', 'Excellent 🌟'];
@@ -458,73 +475,27 @@
         async function submitFeedback(e) {
             e.preventDefault();
             const id = document.getElementById('feedbackProblemId').value;
-            const feedback = document.getElementById('feedbackText').value || `Citizen rated this ticket ${selectedRatingValue}/5 stars.`;
-            const rating = selectedRatingValue > 0 ? selectedRatingValue : undefined;
-            if (!selectedRatingValue) return showPopup('warning', 'Please select a star rating before submitting.');
+            const feedback = document.getElementById('feedbackText').value;
+            if (!feedback || feedback.trim().length === 0) return showPopup('warning', 'Please enter a comment.');
             try {
-                await apiFetch(`/problems/${id}/feedback`, 'PUT', { feedback, rating });
+                await apiFetch(`/problems/${id}/feedback`, 'PUT', { feedback });
                 closeFeedbackModal();
-                showPopup('success', `⭐ Thank you! Your ${selectedRatingValue}-star rating was submitted.`);
+                showPopup('success', `Feedback submitted to Admin.`);
                 await syncData(); loadCitizenProblems(); loadCitizenProfile();
             } catch (e) { showPopup('error', e.message); }
         }
 
-        // ── Satisfaction Check Flow ──────────────────────────────────────────
-        function openSatisfactionCheck(id) {
-            satisfactionProblemId = id;
-            document.getElementById('satisfactionTicketId').textContent = 'Ticket: ' + id;
-            document.getElementById('satisfactionModal').classList.remove('hidden');
-        }
-        function closeSatisfactionModal() {
-            document.getElementById('satisfactionModal').classList.add('hidden');
-            satisfactionProblemId = null;
-        }
-        async function satisfactionYes() {
-            // Citizen confirms resolved → submit positive feedback and close
+        async function submitRating(e) {
+            e.preventDefault();
+            const id = document.getElementById('ratingProblemId').value;
+            const rating = selectedRatingValue > 0 ? selectedRatingValue : undefined;
+            if (!rating) return showPopup('warning', 'Please select a star rating.');
             try {
-                await apiFetch(`/problems/${satisfactionProblemId}/feedback`, 'PUT', { feedback: 'Citizen confirmed: Issue resolved after reassignment. ✅' });
-                closeSatisfactionModal();
-                showPopup('success', '🎉 Great! Ticket marked as resolved.');
+                await apiFetch(`/problems/${id}/feedback`, 'PUT', { rating });
+                closeRatingModal();
+                showPopup('success', `⭐ Thank you! Your ${selectedRatingValue}-star rating was submitted.`);
                 await syncData(); loadCitizenProblems(); loadCitizenProfile();
             } catch (e) { showPopup('error', e.message); }
-        }
-        function satisfactionNo() {
-            // Citizen says problem NOT solved → open re-raise modal
-            const id = satisfactionProblemId;
-            closeSatisfactionModal();
-            document.getElementById('reraiseProblemId').value = id;
-            document.getElementById('reraiseTicketIdLabel').textContent = 'Original Ticket: ' + id;
-            document.getElementById('reraiseDescription').value = '';
-            document.getElementById('reraiseModal').classList.remove('hidden');
-        }
-        function closeReraiseModal() {
-            document.getElementById('reraiseModal').classList.add('hidden');
-        }
-        async function submitReraiseIssue(e) {
-            e.preventDefault();
-            const originalId = document.getElementById('reraiseProblemId').value;
-            const description = document.getElementById('reraiseDescription').value;
-            const priority = document.getElementById('reraisePriority').value;
-            // Find original problem to copy department + location
-            const original = problems.find(p => p.id === originalId);
-            if (!original) return showPopup('error', 'Original ticket not found.');
-            const formData = new FormData();
-            formData.append('department', original.department);
-            formData.append('priority', priority);
-            formData.append('description', `[Re-raised from ${originalId}] ${description}`);
-            formData.append('location', original.location);
-            try {
-                const headers = {};
-                if (apiToken) headers['Authorization'] = 'Bearer ' + apiToken;
-                const res = await fetch(API_BASE + '/problems', { method: 'POST', headers, body: formData });
-                if (!res.ok) { let err; try { err = (await res.json()).error; } catch(ex) { err = res.statusText; } throw new Error(err); }
-                const data = await res.json();
-                // Also submit negative feedback on original ticket
-                await apiFetch(`/problems/${originalId}/feedback`, 'PUT', { feedback: `Citizen reported problem NOT resolved. Re-raised as new ticket: ${data.id}` });
-                closeReraiseModal();
-                showPopup('success', `✅ New ticket ${data.id} created! Original ticket feedback updated.`);
-                await syncData(); loadCitizenProblems(); loadCitizenProfile();
-            } catch (err) { showPopup('error', err.message); }
         }
 
         function loadCitizenProblems() { 
@@ -592,7 +563,7 @@
             loadOfficialProblems(); 
         }
         function loadOfficialProblems() {
-            let list = problems.filter(p => p.assigned_to === currentUser.id || p.department === currentUser.department);
+            let list = problems.filter(p => p.assigned_to === currentUser.id || (!p.assigned_to && p.department === currentUser.department));
             if (currentFilter !== 'all') list = list.filter(p => p.status === currentFilter);
             const container = document.getElementById('officialProblemsList');
             if (list.length === 0) {
@@ -603,23 +574,30 @@
         }
         function loadOfficialProfile() {
             document.getElementById('editOffName').value = currentUser.name; document.getElementById('editOffUsername').value = currentUser.username; document.getElementById('editOffMobile').value = currentUser.mobile;
-            const myProbs = problems.filter(p => p.assigned_to === currentUser.id || p.department === currentUser.department);
+            const myProbs = problems.filter(p => p.assigned_to === currentUser.id || (!p.assigned_to && p.department === currentUser.department));
             const pen = myProbs.filter(p => p.status === 'pending').length, prog = myProbs.filter(p => p.status === 'progress').length, comp = myProbs.filter(p => p.status === 'completed' || p.status === 'closed').length;
             document.getElementById('totalAssigned').textContent = myProbs.length; document.getElementById('totalInProgress').textContent = prog; document.getElementById('totalSolved').textContent = comp; document.getElementById('successRate').textContent = myProbs.length ? Math.round((comp / myProbs.length) * 100) + '%' : '0%';
             renderStatusChart('officialStatsChart', [pen, prog, comp], true);
         }
 
-        function openStatusUpdate(id) { document.getElementById('updateProblemId').value = id; document.getElementById('statusUpdateModal').classList.remove('hidden'); }
+        function openStatusUpdate(id) { 
+            document.getElementById('updateProblemId').value = id; 
+            document.getElementById('newStatus').value = 'progress';
+            document.getElementById('proofUploadSection').classList.add('hidden');
+            clearProofImage();
+            document.getElementById('statusUpdateModal').classList.remove('hidden'); 
+        }
         document.getElementById('newStatus').addEventListener('change', e => document.getElementById('proofUploadSection').classList.toggle('hidden', e.target.value !== 'completed'));
         function closeStatusUpdate() { document.getElementById('statusUpdateModal').classList.add('hidden'); }
         async function updateProblemStatus(e) {
             e.preventDefault(); const id = document.getElementById('updateProblemId').value, status = document.getElementById('newStatus').value, proofFile = document.getElementById('proofImage').files[0];
-            if (status === 'completed' && !proofFile) return showPopup('warning', 'Proof required');
+            if (status === 'completed' && !proofFile && !capturedProofBlob) return showPopup('warning', 'Proof required');
             
             // Use formData to support image file uploads
             const formData = new FormData();
             formData.append('status', status);
             if (proofFile) formData.append('proofImage', proofFile);
+            else if (capturedProofBlob) formData.append('proofImage', capturedProofBlob, 'proof.jpg');
             
             try { 
                 const headers = {};
@@ -705,14 +683,22 @@
         function loadAdminOfficials() { document.getElementById('adminOfficialsList').innerHTML = officials.map(o => `<tr><td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${o.id}</td><td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${o.name}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${getDepartmentName(o.department)}</td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onclick="deleteUser('official', '${o.id}')" class="text-red-600 hover:text-red-900">Delete</button></td></tr>`).join(''); }
         async function deleteUser(type, id) { try { await apiFetch(`/users/${type}/${id}`, 'DELETE'); showPopup('success', type + ' deleted'); await showAdminSection(type === 'citizen' ? 'users' : 'officials'); } catch (e) { showPopup('error', e.message); } }
 
-        function loadAdminFeedbacks() { const list = problems.filter(p => p.feedback && p.status === 'completed'); document.getElementById('adminFeedbackList').innerHTML = list.length ? list.map(p => renderProblemCard(p, 'admin')).join('') : '<p class="text-slate-500 col-span-2">No pending feedbacks to review.</p>'; }
+        function loadAdminFeedbacks() { 
+            const list = problems.filter(p => {
+                if (p.status !== 'completed' || !p.feedback) return false;
+                const lastFeedbackIndex = p.feedback.lastIndexOf('[Citizen]:');
+                const lastAdminIndex = p.feedback.lastIndexOf('[Admin: Re-evaluate]');
+                return lastFeedbackIndex >= lastAdminIndex;
+            });
+            document.getElementById('adminFeedbackList').innerHTML = list.length ? list.map(p => renderProblemCard(p, 'admin')).join('') : '<p class="text-slate-500 col-span-2">No pending feedbacks to review.</p>'; 
+        }
         async function approveAndClose(id) { try { await apiFetch(`/problems/${id}/admin-action`, 'PUT', { status: 'closed', feedbackAppend: ' [Admin: Approved & Closed]' }); showPopup('success', 'Closed'); await showAdminSection('feedbacks'); } catch (e) { showPopup('error', e.message); } }
         async function reassignToOfficial(id) { try { await apiFetch(`/problems/${id}/admin-action`, 'PUT', { status: 'progress', feedbackAppend: ' [Admin: Re-evaluate]', clearProof: true }); showPopup('success', 'Reassigned'); await showAdminSection('feedbacks'); } catch (e) { showPopup('error', e.message); } }
 
         document.getElementById('problemImage').addEventListener('change', function (e) { if (e.target.files[0]) { document.getElementById('previewImg').src = URL.createObjectURL(e.target.files[0]); document.getElementById('imagePreview').classList.remove('hidden'); capturedImageBlob = null; } });
         function clearImage() { capturedImageBlob = null; document.getElementById('problemImage').value = ''; document.getElementById('imagePreview').classList.add('hidden'); }
-        document.getElementById('proofImage').addEventListener('change', function (e) { if (e.target.files[0]) { document.getElementById('proofPreviewImg').src = URL.createObjectURL(e.target.files[0]); document.getElementById('proofImagePreview').classList.remove('hidden'); } });
-        function clearProofImage() { document.getElementById('proofImage').value = ''; document.getElementById('proofImagePreview').classList.add('hidden'); }
+        document.getElementById('proofImage').addEventListener('change', function (e) { if (e.target.files[0]) { document.getElementById('proofPreviewImg').src = URL.createObjectURL(e.target.files[0]); document.getElementById('proofImagePreview').classList.remove('hidden'); capturedProofBlob = null; } });
+        function clearProofImage() { capturedProofBlob = null; document.getElementById('proofImage').value = ''; document.getElementById('proofImagePreview').classList.add('hidden'); }
 
         // ── Mobile Navigation Helpers ────────────────────────────────────
         function toggleMobileNav(id) {

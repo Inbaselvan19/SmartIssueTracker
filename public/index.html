@@ -15,53 +15,105 @@
 
 <body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen text-slate-800">
 
-    <div id="userTypeSelection" class="min-h-screen flex items-center justify-center p-4 relative">
-        <div class="glass-card rounded-3xl shadow-2xl p-10 w-full max-w-md fade-in border border-white">
-            <div class="text-center mb-10">
-                <div
-                    class="w-24 h-24 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg transform rotate-3 hover:rotate-6 transition duration-300">
-                    <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h3M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
-                        </path>
-                    </svg>
+    <div id="userTypeSelection" class="min-h-screen flex flex-col lg:flex-row relative">
+        
+        <!-- Left Side: Edge-to-Edge Image & Branding -->
+        <div class="lg:w-1/2 relative min-h-[40vh] lg:min-h-screen flex items-center p-10 lg:p-16 overflow-hidden">
+            <!-- Background Image -->
+            <img src="images/smart_city.png" alt="Smart City Background" class="absolute inset-0 w-full h-full object-cover transform scale-110 blur-sm opacity-30 object-center">
+            
+            <!-- Color Overlay -->
+            <div class="absolute inset-0 bg-gradient-to-t from-blue-900 via-indigo-900/80 to-blue-900/40 mix-blend-multiply"></div>
+            <div class="absolute inset-0 bg-blue-600/20"></div>
+
+            <!-- Content Overlay -->
+            <div class="relative z-10 w-full">
+                <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 lg:p-12 shadow-2xl max-w-xl mx-auto lg:mx-0 transform translate-y-4 hover:translate-y-0 transition duration-500">
+                    <div class="flex items-center space-x-5 mb-6">
+                        <div class="w-16 h-16 bg-white text-blue-600 rounded-2xl flex items-center justify-center shadow-xl transform -rotate-3 flex-shrink-0">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h3M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                            </svg>
+                        </div>
+                        <h1 class="text-4xl lg:text-5xl font-extrabold text-white tracking-tight drop-shadow-md">SmartConnect</h1>
+                    </div>
+                    <p class="text-blue-100 font-medium text-lg lg:text-xl leading-relaxed">
+                        A modern municipal problem resolution system. Report issues, track progress, and help build a smarter, cleaner community together.
+                    </p>
                 </div>
-                <h1 class="text-4xl font-extrabold text-slate-800 mb-3 tracking-tight">SmartConnect</h1>
-                <p class="text-slate-500 font-medium">Municipal Problem Resolution System</p>
+            </div>
+        </div>
+
+        <!-- Right Side: Login Options -->
+        <div class="lg:w-1/2 flex items-center justify-center p-6 lg:p-16 bg-slate-50 relative">
+            
+            <!-- Decorative abstract circles on the right side -->
+            <div class="absolute top-0 right-0 w-full h-full overflow-hidden pointer-events-none">
+                <div class="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-200/40 rounded-full blur-3xl"></div>
+                <div class="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-200/40 rounded-full blur-3xl"></div>
             </div>
 
-            <div class="space-y-4">
-                <button onclick="showLogin('citizen')"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-xl transition duration-300 transform hover:-translate-y-1 shadow-md flex items-center justify-center space-x-3 group">
-                    <svg class="w-6 h-6 group-hover:scale-110 transition" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                    </svg>
-                    <span class="text-lg">Citizen Portal</span>
-                </button>
+            <div class="w-full max-w-md relative z-10 fade-in">
+                <div class="text-center">
+                    <h2 class="text-3xl lg:text-4xl font-extrabold text-slate-800 mb-2">Welcome</h2>
+                    <p class="text-slate-500 mb-10 text-lg">Please select your portal to continue.</p>
+                </div>
 
-                <button onclick="showLogin('official')"
-                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-4 px-6 rounded-xl transition duration-300 transform hover:-translate-y-1 shadow-md flex items-center justify-center space-x-3 group">
-                    <svg class="w-6 h-6 group-hover:scale-110 transition" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
-                        </path>
-                    </svg>
-                    <span class="text-lg">Official Portal</span>
-                </button>
+                <div class="space-y-4">
+                    <!-- Citizen Button -->
+                    <button onclick="showLogin('citizen')"
+                        class="w-full group relative overflow-hidden bg-white border border-slate-200 hover:border-blue-500 p-5 rounded-2xl transition duration-300 shadow-sm hover:shadow-xl flex items-center">
+                        <div class="absolute inset-0 bg-blue-50 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></div>
+                        <div class="relative flex items-center w-full">
+                            <div class="bg-blue-100 p-4 rounded-xl text-blue-600 mr-5 group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                            </div>
+                            <div class="text-left flex-1">
+                                <div class="text-xl font-bold text-slate-800 group-hover:text-blue-900 transition-colors">Citizen Portal</div>
+                                <div class="text-sm text-slate-500 group-hover:text-blue-700 transition-colors">Report & track civic issues</div>
+                            </div>
+                            <div class="text-slate-300 group-hover:text-blue-600 transition-colors">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            </div>
+                        </div>
+                    </button>
 
-                <button onclick="showLogin('admin')"
-                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-4 px-6 rounded-xl transition duration-300 transform hover:-translate-y-1 shadow-md flex items-center justify-center space-x-3 group">
-                    <svg class="w-6 h-6 group-hover:scale-110 transition" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4">
-                        </path>
-                    </svg>
-                    <span class="text-lg">Admin Portal</span>
-                </button>
+                    <!-- Official Button -->
+                    <button onclick="showLogin('official')"
+                        class="w-full group relative overflow-hidden bg-white border border-slate-200 hover:border-emerald-500 p-5 rounded-2xl transition duration-300 shadow-sm hover:shadow-xl flex items-center">
+                        <div class="absolute inset-0 bg-emerald-50 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></div>
+                        <div class="relative flex items-center w-full">
+                            <div class="bg-emerald-100 p-4 rounded-xl text-emerald-600 mr-5 group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                            </div>
+                            <div class="text-left flex-1">
+                                <div class="text-xl font-bold text-slate-800 group-hover:text-emerald-900 transition-colors">Official Portal</div>
+                                <div class="text-sm text-slate-500 group-hover:text-emerald-700 transition-colors">Manage assigned tasks</div>
+                            </div>
+                            <div class="text-slate-300 group-hover:text-emerald-600 transition-colors">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- Admin Button -->
+                    <button onclick="showLogin('admin')"
+                        class="w-full group relative overflow-hidden bg-white border border-slate-200 hover:border-purple-500 p-5 rounded-2xl transition duration-300 shadow-sm hover:shadow-xl flex items-center">
+                        <div class="absolute inset-0 bg-purple-50 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></div>
+                        <div class="relative flex items-center w-full">
+                            <div class="bg-purple-100 p-4 rounded-xl text-purple-600 mr-5 group-hover:scale-110 group-hover:bg-purple-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                            </div>
+                            <div class="text-left flex-1">
+                                <div class="text-xl font-bold text-slate-800 group-hover:text-purple-900 transition-colors">Admin Portal</div>
+                                <div class="text-sm text-slate-500 group-hover:text-purple-700 transition-colors">System control panel</div>
+                            </div>
+                            <div class="text-slate-300 group-hover:text-purple-600 transition-colors">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            </div>
+                        </div>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -775,99 +827,54 @@
         </div>
     </div>
 
-    <!-- Feedback Modal with Star Rating -->
+    <!-- Feedback Modal (Text Only) -->
     <div id="feedbackModal"
         class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
         <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md fade-in">
-            <h2 class="text-2xl font-extrabold text-slate-800 mb-1">Rate Your Experience</h2>
-            <p class="text-sm text-slate-500 mb-6">Your feedback helps the admin improve service quality.</p>
+            <h2 class="text-2xl font-extrabold text-slate-800 mb-1">Confirm Resolution</h2>
+            <p class="text-sm text-slate-500 mb-6">Please let the Admin know if your issue was resolved.</p>
             <form onsubmit="submitFeedback(event)" class="space-y-5">
                 <input type="hidden" id="feedbackProblemId">
-                <!-- Star Rating -->
                 <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-3">How well was your issue resolved?</label>
-                    <div class="flex space-x-2 justify-center" id="starRatingRow">
-                        <button type="button" onclick="setRating(1)" id="star1" class="text-4xl text-slate-300 hover:text-yellow-400 transition-all star-btn" title="Poor"       >★</button>
-                        <button type="button" onclick="setRating(2)" id="star2" class="text-4xl text-slate-300 hover:text-yellow-400 transition-all star-btn" title="Fair"       >★</button>
-                        <button type="button" onclick="setRating(3)" id="star3" class="text-4xl text-slate-300 hover:text-yellow-400 transition-all star-btn" title="Good"       >★</button>
-                        <button type="button" onclick="setRating(4)" id="star4" class="text-4xl text-slate-300 hover:text-yellow-400 transition-all star-btn" title="Very Good"  >★</button>
-                        <button type="button" onclick="setRating(5)" id="star5" class="text-4xl text-slate-300 hover:text-yellow-400 transition-all star-btn" title="Excellent"  >★</button>
-                    </div>
-                    <p class="text-center text-xs text-slate-400 mt-1" id="ratingLabel">Click a star to rate</p>
-                    <input type="hidden" id="selectedRating" value="0">
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-2">Comments <span class="font-normal text-slate-400">(Optional)</span></label>
-                    <textarea id="feedbackText" rows="3"
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Your Comment</label>
+                    <textarea id="feedbackText" rows="4" required
                         class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                        placeholder="What went well or could be improved?"></textarea>
+                        placeholder="Yes, the issue is fixed. / No, it's still broken."></textarea>
                 </div>
                 <div class="flex space-x-3 pt-1">
                     <button type="button" onclick="closeFeedbackModal()"
                         class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3.5 rounded-xl transition">Cancel</button>
                     <button type="submit" id="feedbackSubmitBtn"
-                        class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition shadow-lg">Submit to Admin</button>
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg">Submit to Admin</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- ══ Satisfaction Check Modal (shown after reassigned ticket is completed again) ══ -->
-    <div id="satisfactionModal"
-        class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
-        <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md fade-in text-center">
-            <div class="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                <span class="text-4xl">✅</span>
-            </div>
-            <h2 class="text-2xl font-extrabold text-slate-800 mb-2">Issue Resolved?</h2>
-            <p class="text-slate-500 text-sm mb-2">This ticket was reassigned and is now marked as <strong>completed</strong> again.</p>
-            <p class="text-slate-600 font-semibold mb-6" id="satisfactionTicketId"></p>
-            <p class="text-slate-700 font-bold mb-6">Is your problem actually solved?</p>
-            <div class="flex space-x-3">
-                <button onclick="satisfactionNo()" id="satisfactionNoBtn"
-                    class="flex-1 bg-red-100 hover:bg-red-200 text-red-700 font-bold py-3.5 rounded-xl transition border border-red-200">
-                    ❌ No, Still an Issue
-                </button>
-                <button onclick="satisfactionYes()" id="satisfactionYesBtn"
-                    class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg">
-                    ✅ Yes, Resolved!
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ══ Re-raise Issue Modal (shown when citizen says problem is NOT solved) ══ -->
-    <div id="reraiseModal"
+    <!-- Rating Modal (Stars Only) -->
+    <div id="ratingModal"
         class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
         <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md fade-in">
-            <div class="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mb-5">
-                <span class="text-3xl">🔁</span>
-            </div>
-            <h2 class="text-2xl font-extrabold text-slate-800 mb-1">Re-raise This Issue</h2>
-            <p class="text-sm text-slate-500 mb-1">We're sorry the problem wasn't resolved. Describe what's still wrong and we'll escalate it.</p>
-            <p class="text-xs font-mono text-slate-400 mb-5" id="reraiseTicketIdLabel"></p>
-            <form onsubmit="submitReraiseIssue(event)" class="space-y-4">
-                <input type="hidden" id="reraiseProblemId">
+            <h2 class="text-2xl font-extrabold text-slate-800 mb-1">Rate Your Experience</h2>
+            <p class="text-sm text-slate-500 mb-6">The issue is closed! How was the service?</p>
+            <form onsubmit="submitRating(event)" class="space-y-5">
+                <input type="hidden" id="ratingProblemId">
                 <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-1">What is still wrong?</label>
-                    <textarea id="reraiseDescription" rows="4" required
-                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-400 outline-none"
-                        placeholder="Describe the remaining or recurring problem..."></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-slate-700 mb-1">Priority</label>
-                    <select id="reraisePriority" required
-                        class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-400 outline-none">
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
-                    </select>
+                    <div class="flex space-x-2 justify-center" id="starRatingRow">
+                        <button type="button" onclick="setRating(1)" id="star1" class="text-4xl text-slate-300 hover:text-yellow-400 transition-all star-btn" title="Poor">★</button>
+                        <button type="button" onclick="setRating(2)" id="star2" class="text-4xl text-slate-300 hover:text-yellow-400 transition-all star-btn" title="Fair">★</button>
+                        <button type="button" onclick="setRating(3)" id="star3" class="text-4xl text-slate-300 hover:text-yellow-400 transition-all star-btn" title="Good">★</button>
+                        <button type="button" onclick="setRating(4)" id="star4" class="text-4xl text-slate-300 hover:text-yellow-400 transition-all star-btn" title="Very Good">★</button>
+                        <button type="button" onclick="setRating(5)" id="star5" class="text-4xl text-slate-300 hover:text-yellow-400 transition-all star-btn" title="Excellent">★</button>
+                    </div>
+                    <p class="text-center text-xs text-slate-400 mt-1" id="ratingLabel">Click a star to rate</p>
+                    <input type="hidden" id="selectedRating" value="0">
                 </div>
                 <div class="flex space-x-3 pt-1">
-                    <button type="button" onclick="closeReraiseModal()"
+                    <button type="button" onclick="closeRatingModal()"
                         class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3.5 rounded-xl transition">Cancel</button>
                     <button type="submit"
-                        class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg">🔁 Re-raise Issue</button>
+                        class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3.5 rounded-xl transition shadow-lg">Submit Rating</button>
                 </div>
             </form>
         </div>
@@ -889,17 +896,22 @@
                 <div id="proofUploadSection" class="hidden p-4 bg-emerald-50 rounded-xl border border-emerald-100">
                     <label class="block text-sm font-bold text-emerald-800 mb-2">Upload Resolution Proof
                         (Required)</label>
-                    <div class="flex space-x-3 mb-3">
+                    <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 mb-3">
+                        <button type="button" onclick="openCamera('proof')"
+                            class="flex-1 bg-white border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 font-semibold px-4 py-2.5 rounded-xl transition flex items-center justify-center shadow-sm">
+                            <span class="text-sm">📷 Open Camera</span>
+                        </button>
                         <button type="button" onclick="document.getElementById('proofImage').click()"
-                            class="flex-1 bg-white border border-emerald-300 text-emerald-700 font-bold py-2 rounded-lg text-sm hover:bg-emerald-100 transition shadow-sm">Upload
-                            Image</button>
+                            class="flex-1 bg-emerald-600 border-2 border-emerald-600 text-white hover:bg-emerald-700 font-semibold px-4 py-2.5 rounded-xl transition flex items-center justify-center shadow-sm">
+                            <span class="text-sm">📁 Upload Gallery</span>
+                        </button>
                     </div>
                     <input type="file" id="proofImage" accept="image/*" class="hidden">
-                    <div id="proofImagePreview" class="hidden relative">
+                    <div id="proofImagePreview" class="hidden relative mt-2">
                         <img id="proofPreviewImg"
-                            class="w-full h-32 object-cover rounded-lg border-2 border-emerald-200">
+                            class="w-full h-40 object-cover rounded-lg border-2 border-emerald-200 shadow-sm">
                         <button type="button" onclick="clearProofImage()"
-                            class="absolute top-1 right-1 bg-red-500 text-white p-1 rounded hover:bg-red-600 text-xs shadow">Clear</button>
+                            class="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 text-xs shadow-md transition font-bold leading-none">X</button>
                     </div>
                 </div>
                 <div class="flex space-x-3 pt-2">
