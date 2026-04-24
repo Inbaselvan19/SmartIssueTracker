@@ -503,7 +503,7 @@
             if (isAdmin && problem.feedback) adminActionHtml = `<div class="mt-4 pt-3 border-t flex space-x-2"><button onclick="approveAndClose('${problem.id}')" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg hover:bg-emerald-700 transition shadow-sm text-sm">Approve & Close</button><button onclick="reassignToOfficial('${problem.id}')" class="flex-1 bg-amber-500 text-white font-bold py-2 rounded-lg hover:bg-amber-600 transition shadow-sm text-sm">Reassign</button></div>`;
             
             let assignedHtml = '';
-            if (isAdmin) {
+            if (role === 'admin' || role === 'admin_view') {
                 if (problem.assigned_to) {
                     const official = officials.find(o => o.id === problem.assigned_to);
                     const offName = official ? official.name : 'Unknown';
