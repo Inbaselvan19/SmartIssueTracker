@@ -38,6 +38,52 @@ router.post('/', authenticateToken, upload.single('image'), async (req, res) => 
     const id = 'PRB-' + Math.floor(100000 + Math.random() * 900000);
 
     try {
+        // ── Deduplication Logic ──
+        const latTol = 0.0005;
+        const lngTol = 0.0005;
+        
+        const activeProblemsInDept = await Problem.find({
+            department,
+            status: { $nin: ['completed', 'closed'] }
+        });
+
+        let existing = null;
+        for (const p of activeProblemsInDept) {
+            if (p.lat && p.lng && lat && lng) {
+                if (Math.abs(p.lat - lat) < latTol && Math.abs(p.lng - lng) < lngTol) {
+                    existing = p; break;
+                }
+            } else if (p.location && location && p.location.trim().toLowerCase() === location.trim().toLowerCase()) {
+                existing = p; break;
+            }
+        }
+
+        if (existing) {
+            if (existing.citizen_id === req.user.id || existing.reporters.includes(req.user.id)) {
+                return res.status(200).json({ message: 'Ticket merged with existing problem', id: existing.id });
+            } else {
+                existing.reporters.push(req.user.id);
+                existing.report_count = (existing.report_count || 1) + 1;
+                existing.updated_at = new Date();
+                
+                if (existing.report_count >= 3 && existing.priority !== 'urgent') {
+                    existing.priority = 'urgent';
+                    existing.feedback = (existing.feedback ? existing.feedback + '\n' : '') + '[System]: High severity! Multiple citizens reported this issue. Priority escalated to URGENT.';
+                } else {
+                    existing.feedback = (existing.feedback ? existing.feedback + '\n' : '') + `[System]: Another citizen reported this issue. Total reports: ${existing.report_count}.`;
+                }
+
+                await existing.save();
+                
+                const citizen = await Citizen.findOne({ id: req.user.id });
+                if (citizen) {
+                    sendTicketSubmittedEmail(citizen.email, citizen, { id: existing.id, department, priority: existing.priority, description: existing.description, location: existing.location });
+                }
+                
+                return res.status(200).json({ message: 'Ticket logged and merged with existing high severity problem', id: existing.id });
+            }
+        }
+
         // Load balancing: assign to the official with the least active problems in the department
         const officialsInDept = await Official.find({ department }).lean();
         let assignedTo = null;

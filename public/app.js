@@ -475,7 +475,7 @@
             const isOverdue = problem.status === 'pending' && (Date.now() - new Date(problem.date_reported)) > 7 * 24 * 60 * 60 * 1000;
             const overdueBadge = isOverdue ? `<span class="ml-1 px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full border border-red-200 animate-pulse">⏰ Overdue</span>` : '';
             const printBtn = role === 'citizen' ? `<button onclick="printTicket('${problem.id}')" title="Print Ticket" class="text-slate-400 hover:text-blue-600 transition p-1 rounded">🖨️</button>` : '';
-            const deleteBtn = (role === 'citizen' || role === 'admin') ? `<button onclick="deleteProblem('${problem.id}')" title="Delete Ticket" class="text-red-400 hover:text-red-600 transition p-1 rounded">🗑️</button>` : '';
+            const deleteBtn = (role === 'citizen' || role === 'admin' || role === 'admin_view') ? `<button onclick="deleteProblem('${problem.id}')" title="Delete Ticket" class="text-red-400 hover:text-red-600 transition p-1 rounded">🗑️</button>` : '';
             let feedbackHtml = '';
             
             const lastFeedbackIndex = problem.feedback ? problem.feedback.lastIndexOf('[Citizen]:') : -1;
@@ -501,12 +501,27 @@
 
             let adminActionHtml = '';
             if (isAdmin && problem.feedback) adminActionHtml = `<div class="mt-4 pt-3 border-t flex space-x-2"><button onclick="approveAndClose('${problem.id}')" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg hover:bg-emerald-700 transition shadow-sm text-sm">Approve & Close</button><button onclick="reassignToOfficial('${problem.id}')" class="flex-1 bg-amber-500 text-white font-bold py-2 rounded-lg hover:bg-amber-600 transition shadow-sm text-sm">Reassign</button></div>`;
+            
+            let assignedHtml = '';
+            if (isAdmin) {
+                if (problem.assigned_to) {
+                    const official = officials.find(o => o.id === problem.assigned_to);
+                    const offName = official ? official.name : 'Unknown';
+                    assignedHtml = `<div class="mt-2 text-sm text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100"><span class="font-bold">Assigned Official:</span> ${offName} (${problem.assigned_to})</div>`;
+                } else {
+                    assignedHtml = `<div class="mt-2 text-sm text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-100 font-bold">⚠️ Unassigned Ticket</div>`;
+                }
+            }
+
+            const reportCount = problem.report_count || 1;
+            const multiBubble = reportCount > 1 ? `<span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full shadow animate-pulse" title="Reported by ${reportCount} citizens">🔥 ${reportCount} Reports</span>` : '';
+            
             return `
                 <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex flex-col h-full">
                     <div class="flex justify-between items-center mb-3">
                         <div>
                             <div class="flex items-center flex-wrap gap-1">
-                                <span class="font-mono text-sm font-bold text-slate-500">${problem.id}</span>${overdueBadge}
+                                <span class="font-mono text-sm font-bold text-slate-500">${problem.id}</span>${overdueBadge}${multiBubble}
                             </div>
                             ${dateStr ? `<p class="text-xs text-slate-400 mt-0.5">📅 ${dateStr}</p>` : ''}
                         </div>
@@ -521,6 +536,7 @@
                     ${proofHtml}
                     <div class="mb-3"><span class="text-sm font-bold">${getDepartmentName(problem.department)}</span> <span class="text-xs float-right ${colors[problem.priority]} uppercase">${problem.priority}</span></div>
                     <div class="flex-grow space-y-1"><p class="text-sm text-slate-600">📍 ${problem.location}</p><p class="text-sm text-slate-500 line-clamp-2">${problem.description}</p></div>
+                    ${assignedHtml}
                     ${feedbackHtml}
                     ${adminActionHtml}
                 </div>`;
@@ -751,7 +767,7 @@
             const p = problems.find(x => x.id === id);
             if (!p) return;
             const body = document.getElementById('adminTicketDetailsBody');
-            body.innerHTML = renderProblemCard(p, 'admin');
+            body.innerHTML = renderProblemCard(p, 'admin_view');
             document.getElementById('adminTicketDetailsModal').classList.remove('hidden');
         }
 
@@ -825,7 +841,65 @@
                 </tr>`).join('') : '<tr><td colspan="4" class="py-6 text-center text-slate-400">No tickets yet.</td></tr>';
         }
         function loadAdminUsers() { document.getElementById('adminCitizensList').innerHTML = citizens.map(c => `<tr><td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${c.id}</td><td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${c.name}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${c.email}</td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onclick="deleteUser('citizen', '${c.id}')" class="text-red-600 hover:text-red-900">Delete</button></td></tr>`).join(''); }
-        function loadAdminOfficials() { document.getElementById('adminOfficialsList').innerHTML = officials.map(o => `<tr><td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${o.id}</td><td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${o.name}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${getDepartmentName(o.department)}</td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onclick="deleteUser('official', '${o.id}')" class="text-red-600 hover:text-red-900">Delete</button></td></tr>`).join(''); }
+        function loadAdminOfficials() { 
+            document.getElementById('adminOfficialsList').innerHTML = officials.map(o => `
+                <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="viewOfficialDetails('${o.id}')">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${o.id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${o.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${getDepartmentName(o.department)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="event.stopPropagation(); deleteUser('official', '${o.id}')" class="text-red-600 hover:text-red-900 transition font-bold px-2 py-1">Delete</button>
+                    </td>
+                </tr>
+            `).join(''); 
+        }
+
+        function viewOfficialDetails(id) {
+            const off = officials.find(o => o.id === id);
+            if (!off) return;
+            document.getElementById('offModalName').innerText = off.name;
+            document.getElementById('offModalDept').innerText = getDepartmentName(off.department) + ' (' + off.id + ')';
+            
+            const assignedTickets = problems.filter(p => p.assigned_to === id);
+            const completedTickets = assignedTickets.filter(p => p.status === 'completed' || p.status === 'closed');
+            const activeTickets = assignedTickets.filter(p => p.status === 'pending' || p.status === 'progress');
+            
+            const successRate = assignedTickets.length ? Math.round((completedTickets.length / assignedTickets.length) * 100) : 0;
+            
+            let totalTime = 0;
+            let resolvedCount = 0;
+            completedTickets.forEach(p => {
+                if (p.date_reported && p.updated_at) {
+                    const ms = new Date(p.updated_at).getTime() - new Date(p.date_reported).getTime();
+                    if (ms > 0) {
+                        totalTime += ms;
+                        resolvedCount++;
+                    }
+                }
+            });
+            
+            let avgTimeStr = 'N/A';
+            if (resolvedCount > 0) {
+                const avgMs = totalTime / resolvedCount;
+                const days = Math.floor(avgMs / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((avgMs / (1000 * 60 * 60)) % 24);
+                if (days > 0) avgTimeStr = `${days}d ${hours}h`;
+                else avgTimeStr = `${hours}h`;
+                if (days === 0 && hours === 0) avgTimeStr = `< 1h`;
+            }
+            
+            document.getElementById('offModalTotal').innerText = assignedTickets.length;
+            document.getElementById('offModalCompleted').innerText = completedTickets.length;
+            document.getElementById('offModalActive').innerText = activeTickets.length;
+            document.getElementById('offModalSuccess').innerText = successRate + '%';
+            document.getElementById('offModalTime').innerText = avgTimeStr;
+            
+            document.getElementById('adminOfficialDetailsModal').classList.remove('hidden');
+        }
+
+        function closeOfficialDetailsModal() {
+            document.getElementById('adminOfficialDetailsModal').classList.add('hidden');
+        }
         async function deleteUser(type, id) { try { await apiFetch(`/users/${type}/${id}`, 'DELETE'); showPopup('success', type + ' deleted'); await showAdminSection(type === 'citizen' ? 'users' : 'officials'); } catch (e) { showPopup('error', e.message); } }
 
         function loadAdminFeedbacks() { 
@@ -888,8 +962,14 @@
             problems.filter(p => p.citizen_id === currentUser.id).forEach(p => {
                 const prev = lastKnownStatuses[p.id];
                 if (prev && prev !== p.status) {
-                    const statusLabels = { pending:'Pending', progress:'In Progress', completed:'Completed', closed:'Closed' };
-                    const msg = `Ticket ${p.id}: "${statusLabels[prev]||prev}" → "${statusLabels[p.status]||p.status}"`;
+                    let msg = `Ticket ${p.id} status changed to "${p.status.toUpperCase()}"`;
+                    if (prev === 'completed' && p.status === 'pending') {
+                        msg = `Admin has re-opened Ticket ${p.id} for further action.`;
+                    } else if (p.status === 'progress') {
+                        msg = `Official has started working on Ticket ${p.id}.`;
+                    } else if (p.status === 'completed') {
+                        msg = `Official marked Ticket ${p.id} as completed.`;
+                    }
                     notifLog.unshift({ id: p.id, msg, time: new Date() });
                     notifUnread++;
                     lastKnownStatuses[p.id] = p.status;
@@ -897,6 +977,13 @@
                     changed = true;
                 } else if (!prev) {
                     lastKnownStatuses[p.id] = p.status;
+                    // Notify for new ticket if created within the last 5 minutes
+                    if (Date.now() - new Date(p.date_reported).getTime() < 300000) {
+                        const msg = `Ticket ${p.id} was successfully submitted.`;
+                        notifLog.unshift({ id: p.id, msg, time: new Date() });
+                        notifUnread++;
+                        showPopup('info', '🔔 ' + msg);
+                    }
                     changed = true;
                 }
             });
@@ -951,18 +1038,44 @@
             myTickets.forEach(p => {
                 const prev = offLastKnownStatuses[p.id];
                 const feedbackLen = p.feedback ? p.feedback.length : 0;
+                const reportCount = p.report_count || 1;
                 if (!prev) {
-                    offLastKnownStatuses[p.id] = { status: p.status, feedbackLen };
+                    offLastKnownStatuses[p.id] = { status: p.status, feedbackLen, reportCount };
+                    // Notify for newly assigned ticket if it is recent
+                    if (Date.now() - new Date(p.date_reported).getTime() < 300000 || p.status === 'pending') {
+                        // Check if we already notified about this to avoid spam on new devices
+                        const alreadyNotified = offNotifLog.some(n => n.id === p.id && n.msg.includes('assigned'));
+                        if (!alreadyNotified) {
+                            const msg = `New Ticket ${p.id} assigned to your department.`;
+                            offNotifLog.unshift({ id: p.id, msg, time: new Date(), type: 'status' });
+                            offNotifUnread++;
+                            showPopup('info', '🔔 ' + msg);
+                        }
+                    }
                     changed = true;
                 } else {
-                    // New ticket assigned (status change)
-                    if (prev.status !== p.status) {
-                        const statusLabels = { pending:'Pending', progress:'In Progress', completed:'Completed', closed:'Closed' };
-                        const msg = `Ticket ${p.id} status changed: "${statusLabels[prev.status]||prev.status}" → "${statusLabels[p.status]||p.status}"`;
+                    // Severity Increased
+                    if (reportCount > prev.reportCount) {
+                        const msg = `🚨 Ticket ${p.id} Severity Increased! Reported by ${reportCount} citizens.`;
                         offNotifLog.unshift({ id: p.id, msg, time: new Date(), type: 'status' });
                         offNotifUnread++;
+                        offLastKnownStatuses[p.id].reportCount = reportCount;
+                        showPopup('error', msg); // Red alert
+                        changed = true;
+                    }
+                    // Status changed
+                    if (prev.status !== p.status) {
+                        let msg = null;
+                        if (prev.status === 'completed' && p.status === 'pending') {
+                            msg = `Admin has re-submitted Ticket ${p.id} for further action.`;
+                        }
+                        
+                        if (msg) {
+                            offNotifLog.unshift({ id: p.id, msg, time: new Date(), type: 'status' });
+                            offNotifUnread++;
+                            showPopup('info', '🔔 ' + msg);
+                        }
                         offLastKnownStatuses[p.id].status = p.status;
-                        showPopup('info', '🔔 ' + msg);
                         changed = true;
                     }
                     // Citizen feedback received

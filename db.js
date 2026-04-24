@@ -51,7 +51,9 @@ const problemSchema = new mongoose.Schema({
     feedback: { type: String },
     rating: { type: Number, min: 1, max: 5, default: null },
     date_reported: { type: Date, default: Date.now },
-    updated_at: { type: Date, default: Date.now }
+    updated_at: { type: Date, default: Date.now },
+    report_count: { type: Number, default: 1 },
+    reporters: { type: [String], default: [] }
 });
 
 const otpSchema = new mongoose.Schema({
