@@ -1331,6 +1331,19 @@
                 ['Description', p.description], ['Date Reported', dateStr],
                 ['Status', p.status.toUpperCase()], ['Citizen Rating', stars]
             ];
+            let imgUrl = p.image_data;
+            if (imgUrl && imgUrl.startsWith('/')) imgUrl = SERVER_BASE + imgUrl;
+            let proofUrlStr = p.proof_image;
+            if (proofUrlStr && proofUrlStr.startsWith('/')) proofUrlStr = SERVER_BASE + proofUrlStr;
+
+            let imagesHtml = '';
+            if (imgUrl || proofUrlStr) {
+                imagesHtml = `<div style="margin-top:15px;display:flex;gap:15px;">`;
+                if (imgUrl) imagesHtml += `<div style="flex:1;"><p style="font-size:12px;color:#64748b;margin-bottom:4px;font-weight:bold;">Reported Problem Image</p><img src="${imgUrl}" style="width:100%;border-radius:8px;height:180px;object-fit:cover;border:1px solid #e2e8f0;"></div>`;
+                if (proofUrlStr) imagesHtml += `<div style="flex:1;"><p style="font-size:12px;color:#64748b;margin-bottom:4px;font-weight:bold;">Official Resolution Proof</p><img src="${proofUrlStr}" style="width:100%;border-radius:8px;height:180px;object-fit:cover;border:2px solid #10b981;"></div>`;
+                imagesHtml += `</div>`;
+            }
+
             document.getElementById('printTicketContent').innerHTML = `
                 <div style="border:2px solid #e2e8f0;border-radius:12px;padding:20px;background:#f8fafc;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -1344,6 +1357,7 @@
                     <table style="width:100%;border-collapse:collapse;font-size:13px;">
                         ${rows.map(([l,v]) => `<tr><td style="padding:5px 0;color:#64748b;width:130px;vertical-align:top;">${l}</td><td style="padding:5px 0;font-weight:600;color:#1e293b;">${v}</td></tr>`).join('')}
                     </table>
+                    ${imagesHtml}
                 </div>`;
             document.getElementById('printModal').classList.remove('hidden');
         }
