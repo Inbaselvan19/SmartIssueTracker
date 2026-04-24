@@ -1338,24 +1338,24 @@
 
             let imagesHtml = '';
             if (imgUrl || proofUrlStr) {
-                imagesHtml = `<div style="margin-top:15px;display:flex;gap:15px;">`;
-                if (imgUrl) imagesHtml += `<div style="flex:1;"><p style="font-size:12px;color:#64748b;margin-bottom:4px;font-weight:bold;">Reported Problem Image</p><img src="${imgUrl}" style="width:100%;border-radius:8px;height:180px;object-fit:cover;border:1px solid #e2e8f0;"></div>`;
-                if (proofUrlStr) imagesHtml += `<div style="flex:1;"><p style="font-size:12px;color:#64748b;margin-bottom:4px;font-weight:bold;">Official Resolution Proof</p><img src="${proofUrlStr}" style="width:100%;border-radius:8px;height:180px;object-fit:cover;border:2px solid #10b981;"></div>`;
+                imagesHtml = `<div class="mt-4 flex flex-col sm:flex-row gap-4">`;
+                if (imgUrl) imagesHtml += `<div class="flex-1"><p class="text-xs text-slate-500 mb-1 font-bold">Reported Problem Image</p><img src="${imgUrl}" class="w-full rounded-xl h-40 object-cover border border-slate-200"></div>`;
+                if (proofUrlStr) imagesHtml += `<div class="flex-1"><p class="text-xs text-slate-500 mb-1 font-bold">Official Resolution Proof</p><img src="${proofUrlStr}" class="w-full rounded-xl h-40 object-cover border-2 border-emerald-500"></div>`;
                 imagesHtml += `</div>`;
             }
 
             document.getElementById('printTicketContent').innerHTML = `
-                <div style="border:2px solid #e2e8f0;border-radius:12px;padding:20px;background:#f8fafc;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <div class="bg-white border-2 border-slate-200 rounded-2xl p-5">
+                    <div class="flex justify-between items-center mb-4">
                         <div>
-                            <p style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;margin:0;">SmartConnect Municipal Portal</p>
-                            <p style="font-size:18px;font-weight:700;color:#1e293b;margin:4px 0 0;">Ticket Receipt</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase m-0 leading-tight">SmartConnect Municipal Portal</p>
+                            <p class="text-lg font-extrabold text-slate-800 m-0 leading-tight">Ticket Receipt</p>
                         </div>
-                        <span style="background:${statusColors[p.status]||'#94a3b8'};color:#fff;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700;">${p.status.toUpperCase()}</span>
+                        <span class="bg-slate-800 text-white px-3 py-1 rounded-full text-xs font-bold uppercase">${p.status}</span>
                     </div>
-                    <hr style="border:none;border-top:1px solid #e2e8f0;margin:12px 0;">
-                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                        ${rows.map(([l,v]) => `<tr><td style="padding:5px 0;color:#64748b;width:130px;vertical-align:top;">${l}</td><td style="padding:5px 0;font-weight:600;color:#1e293b;">${v}</td></tr>`).join('')}
+                    <hr class="border-slate-100 mb-4">
+                    <table class="w-full text-sm">
+                        ${rows.map(([l,v]) => `<tr><td class="py-1.5 text-slate-500 w-1/3 align-top">${l}</td><td class="py-1.5 font-bold text-slate-800">${v}</td></tr>`).join('')}
                     </table>
                     ${imagesHtml}
                 </div>`;

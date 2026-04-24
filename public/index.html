@@ -1096,18 +1096,18 @@
 
     <!-- ══ Print Ticket Modal ══ -->
     <div id="printModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
-        <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg fade-in">
-            <div class="flex justify-between items-start mb-6">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col fade-in" style="max-height:90vh">
+            <div class="flex justify-between items-start p-6 border-b border-slate-100 flex-shrink-0">
                 <div>
                     <h2 class="text-xl font-extrabold text-slate-800">🖨️ Ticket Receipt</h2>
                     <p class="text-xs text-slate-400 mt-1">Print or save this ticket as PDF</p>
                 </div>
-                <button onclick="document.getElementById('printModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <button onclick="document.getElementById('printModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
-            <div id="printTicketContent" class="space-y-3 text-sm text-slate-700 mb-6"></div>
-            <div class="flex gap-3">
+            <div id="printTicketContent" class="flex-1 overflow-y-auto p-6 space-y-3 text-sm text-slate-700 bg-slate-50"></div>
+            <div class="flex gap-3 p-6 border-t border-slate-100 flex-shrink-0 bg-white rounded-b-3xl">
                 <button onclick="document.getElementById('printModal').classList.add('hidden')" class="flex-1 bg-slate-100 hover:bg-slate-200 font-bold py-3 rounded-xl transition">Cancel</button>
                 <button onclick="window.print()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow">🖨️ Print</button>
             </div>
