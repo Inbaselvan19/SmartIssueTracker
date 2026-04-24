@@ -173,14 +173,91 @@
             } catch (e) { showPopup('error', e.message); }
         }
 
-        function citizenSignup(e) {
-            e.preventDefault();
-            const payload = {
-                type: 'citizen', name: document.getElementById('citizenName').value, mobile: document.getElementById('citizenMobile').value,
-                email: document.getElementById('citizenEmail').value, password: document.getElementById('citizenNewPassword').value,
-                address: document.getElementById('citizenAddress').value
-            };
-            handleDirectSignup(payload);
+        async function sendCitizenOTP() {
+            const name = document.getElementById('citizenName').value;
+            const mobile = document.getElementById('citizenMobile').value;
+            const email = document.getElementById('citizenEmail').value;
+            const password = document.getElementById('citizenNewPassword').value;
+            const address = document.getElementById('citizenAddress').value;
+
+            if (!name || !mobile || !email || !password || !address) {
+                return showPopup('error', 'Please fill all required fields');
+            }
+
+            const btn = document.getElementById('btnSendOTP');
+            btn.innerHTML = '<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span> <span>Sending OTP...</span>';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/auth/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    showPopup('success', 'Verification code sent to your email');
+                    document.getElementById('displayOtpEmail').innerText = email;
+                    document.getElementById('citizenSignupStep1').classList.add('hidden');
+                    document.getElementById('citizenSignupStep2').classList.remove('hidden');
+                } else {
+                    showPopup('error', data.error);
+                }
+            } catch (err) {
+                showPopup('error', 'Network error. Try again.');
+            } finally {
+                btn.innerHTML = '<span>Send Verification OTP</span>';
+                btn.disabled = false;
+            }
+        }
+
+        function backToSignupStep1() {
+            document.getElementById('citizenSignupStep2').classList.add('hidden');
+            document.getElementById('citizenSignupStep1').classList.remove('hidden');
+        }
+
+        async function citizenSignupSubmit() {
+            const name = document.getElementById('citizenName').value;
+            const mobile = document.getElementById('citizenMobile').value;
+            const email = document.getElementById('citizenEmail').value;
+            const password = document.getElementById('citizenNewPassword').value;
+            const address = document.getElementById('citizenAddress').value;
+            const otp = document.getElementById('citizenOtp').value;
+
+            if (!otp) return showPopup('error', 'Please enter the verification code');
+
+            const btn = document.getElementById('btnVerifyOTP');
+            btn.innerHTML = '<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span> <span>Verifying...</span>';
+            btn.disabled = true;
+
+            try {
+                const payload = { type: 'citizen', name, mobile, address, email, password, otp };
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showPopup('success', 'Registration successful! Please login.');
+                    showCitizenTab('login');
+                    document.getElementById('citizenName').value = '';
+                    document.getElementById('citizenMobile').value = '';
+                    document.getElementById('citizenEmail').value = '';
+                    document.getElementById('citizenNewPassword').value = '';
+                    document.getElementById('citizenAddress').value = '';
+                    document.getElementById('citizenOtp').value = '';
+                    backToSignupStep1();
+                } else {
+                    showPopup('error', data.error);
+                }
+            } catch (err) {
+                showPopup('error', 'Registration failed. Try again.');
+            } finally {
+                btn.innerHTML = '<span>Verify & Create Account</span>';
+                btn.disabled = false;
+            }
         }
 
         async function officialLogin(e) {
@@ -398,6 +475,7 @@
             const isOverdue = problem.status === 'pending' && (Date.now() - new Date(problem.date_reported)) > 7 * 24 * 60 * 60 * 1000;
             const overdueBadge = isOverdue ? `<span class="ml-1 px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full border border-red-200 animate-pulse">⏰ Overdue</span>` : '';
             const printBtn = role === 'citizen' ? `<button onclick="printTicket('${problem.id}')" title="Print Ticket" class="text-slate-400 hover:text-blue-600 transition p-1 rounded">🖨️</button>` : '';
+            const deleteBtn = (role === 'citizen' || role === 'admin') ? `<button onclick="deleteProblem('${problem.id}')" title="Delete Ticket" class="text-red-400 hover:text-red-600 transition p-1 rounded">🗑️</button>` : '';
             let feedbackHtml = '';
             
             const lastFeedbackIndex = problem.feedback ? problem.feedback.lastIndexOf('[Citizen]:') : -1;
@@ -420,10 +498,7 @@
                     feedbackHtml += `<div class="mt-3 p-2 bg-slate-50 rounded-lg text-sm font-bold text-slate-600 flex justify-between"><span>Experience Rating:</span> <span>${'⭐'.repeat(problem.rating)}</span></div>`;
                 }
             }
-            // "View Messages" button — shown for all roles if there's feedback
-            if (problem.feedback) {
-                feedbackHtml += `<div class="mt-2"><button onclick="openMsgHistory('${problem.id}')" class="w-full bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold py-2 rounded-lg transition border border-purple-200 text-sm">💬 View Message History</button></div>`;
-            }
+
             let adminActionHtml = '';
             if (isAdmin && problem.feedback) adminActionHtml = `<div class="mt-4 pt-3 border-t flex space-x-2"><button onclick="approveAndClose('${problem.id}')" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg hover:bg-emerald-700 transition shadow-sm text-sm">Approve & Close</button><button onclick="reassignToOfficial('${problem.id}')" class="flex-1 bg-amber-500 text-white font-bold py-2 rounded-lg hover:bg-amber-600 transition shadow-sm text-sm">Reassign</button></div>`;
             return `
@@ -439,6 +514,7 @@
                             <span class="px-2 py-1 rounded-md text-xs font-bold ${colors[problem.status]} uppercase">${problem.status}</span>
                             ${isOfficial && problem.status !== 'completed' && problem.status !== 'closed' ? `<button onclick="openStatusUpdate('${problem.id}')" class="bg-emerald-500 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-600 text-xs font-bold transition">Update</button>` : ''}
                             ${printBtn}
+                            ${deleteBtn}
                         </div>
                     </div>
                     ${imgUrl ? `<img src="${imgUrl}" class="w-full h-32 object-cover rounded-lg mb-3">` : ''}
@@ -614,11 +690,74 @@
             } catch (err) { showPopup('error', err.message); }
         }
 
+        async function deleteProblem(id) {
+            if (!confirm('Are you sure you want to delete this ticket? This cannot be undone.')) return;
+            try {
+                await apiFetch(`/problems/${id}`, 'DELETE');
+                showPopup('success', 'Ticket deleted');
+                await syncData();
+                if (currentUserType === 'citizen') {
+                    loadCitizenProblems();
+                    loadCitizenProfile();
+                } else if (currentUserType === 'admin') {
+                    loadAdminOverview();
+                    loadAdminFeedbacks();
+                    if (!document.getElementById('adminTickets').classList.contains('hidden')) {
+                        loadAdminTickets();
+                    }
+                    if (!document.getElementById('adminTicketDetailsModal').classList.contains('hidden')) {
+                        closeAdminTicketDetails();
+                    }
+                }
+            } catch (e) { showPopup('error', e.message); }
+        }
+
         async function showAdminSection(section) {
-            ['adminOverview', 'adminUsers', 'adminOfficials', 'adminFeedbacks'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            ['adminOverview', 'adminUsers', 'adminOfficials', 'adminFeedbacks', 'adminTickets'].forEach(id => document.getElementById(id).classList.add('hidden'));
             document.getElementById('admin' + section.charAt(0).toUpperCase() + section.slice(1)).classList.remove('hidden');
             await syncData();
-            if (section === 'overview') loadAdminOverview(); else if (section === 'users') loadAdminUsers(); else if (section === 'officials') loadAdminOfficials(); else if (section === 'feedbacks') loadAdminFeedbacks();
+            if (section === 'overview') loadAdminOverview(); 
+            else if (section === 'users') loadAdminUsers(); 
+            else if (section === 'officials') loadAdminOfficials(); 
+            else if (section === 'feedbacks') loadAdminFeedbacks();
+            else if (section === 'tickets') loadAdminTickets();
+        }
+
+        function loadAdminTickets() {
+            const list = document.getElementById('adminTicketsList');
+            const search = document.getElementById('adminTicketSearch').value.toLowerCase();
+            const filtered = problems.filter(p => p.id.toLowerCase().includes(search));
+            
+            if (filtered.length === 0) {
+                list.innerHTML = '<tr><td colspan="4" class="px-6 py-10 text-center text-slate-500 font-medium">No tickets found matching your search.</td></tr>';
+                return;
+            }
+            
+            const colors = { pending: 'bg-yellow-100 text-yellow-800', progress: 'bg-blue-100 text-blue-800', completed: 'bg-emerald-100 text-emerald-800', closed: 'bg-slate-200 text-slate-800' };
+            
+            list.innerHTML = filtered.map(p => `
+                <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="viewAdminTicketDetails('${p.id}')">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-700">${p.id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-600">${getDepartmentName(p.department)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm"><span class="px-2 py-1 rounded-md text-xs font-bold ${colors[p.status]} uppercase">${p.status}</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="event.stopPropagation(); deleteProblem('${p.id}')" class="text-red-500 hover:text-red-700 font-bold transition">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function viewAdminTicketDetails(id) {
+            const p = problems.find(x => x.id === id);
+            if (!p) return;
+            const body = document.getElementById('adminTicketDetailsBody');
+            body.innerHTML = renderProblemCard(p, 'admin');
+            document.getElementById('adminTicketDetailsModal').classList.remove('hidden');
+        }
+
+        function closeAdminTicketDetails() {
+            document.getElementById('adminTicketDetailsModal').classList.add('hidden');
+            if (currentUserType === 'admin') loadAdminTickets();
         }
         function loadAdminOverview() {
             document.getElementById('adminStatCitizens').innerText = citizens.length;
@@ -907,7 +1046,7 @@
                 if (empty) empty.classList.remove('hidden');
             } else {
                 if (empty) empty.classList.add('hidden');
-                list.innerHTML = offNotifLog.slice(0, 10).map(n => {
+                list.innerHTML = offNotifLog.slice(0, 50).map(n => {
                     const t = new Date(n.time).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
                     const icon = n.type === 'feedback' ? '💬' : '🔔';
                     return `<li class="px-4 py-3 text-sm hover:bg-slate-50 cursor-pointer" onclick="openMsgHistory('${n.id}')">` +
@@ -919,7 +1058,7 @@
         }
 
         function clearOfficialNotifications() {
-            offNotifUnread = 0; offNotifLog = [];
+            offNotifUnread = 0;
             if (currentUser) {
                 localStorage.setItem('offNotifState_' + currentUser.id, JSON.stringify({
                     statuses: offLastKnownStatuses, log: offNotifLog, unread: offNotifUnread
@@ -961,18 +1100,18 @@
                 if (empty) empty.classList.remove('hidden');
             } else {
                 if (empty) empty.classList.add('hidden');
-                list.innerHTML = notifLog.slice(0, 10).map(n => {
+                list.innerHTML = notifLog.slice(0, 50).map(n => {
                     const t = new Date(n.time).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
-                    return `<li class="px-4 py-3 text-sm hover:bg-slate-50 cursor-default">
+                    return `<li class="px-4 py-3 text-sm hover:bg-slate-50 cursor-pointer" onclick="openMsgHistory('${n.id}')">
                         <p class="text-slate-800 font-medium">🔔 ${n.msg}</p>
-                        <p class="text-slate-400 text-xs mt-0.5">${t}</p>
+                        <p class="text-slate-400 text-xs mt-0.5">${t} — click to view</p>
                     </li>`;
                 }).join('');
             }
         }
 
         function clearNotifications() {
-            notifUnread = 0; notifLog = [];
+            notifUnread = 0;
             if (currentUser) {
                 localStorage.setItem('notifState_' + currentUser.id, JSON.stringify({
                     statuses: lastKnownStatuses, log: notifLog, unread: notifUnread
@@ -1033,7 +1172,9 @@
                     let label = '', text = part, badgeColor = '';
                     if (isCitizen) {
                         const m = part.match(/^\[Citizen\]:\s*([\s\S]*)/);
-                        label = 'Citizen'; text = m ? m[1].trim() : part;
+                        label = 'Citizen'; 
+                        text = m ? m[1].trim() : part;
+                        text = text.replace(/\[Admin:[^\]]*\]/g, '').trim();
                         badgeColor = 'bg-blue-100 text-blue-800';
                     } else if (isAdmin) {
                         const m = part.match(/^\[Admin[^\]]*\]:\s*([\s\S]*)/);

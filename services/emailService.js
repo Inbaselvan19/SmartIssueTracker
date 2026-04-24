@@ -149,9 +149,21 @@ async function sendSMS(mobile, message) {
     }
 }
 
+// ── Email: Send OTP ───────────────────────────────────────────
+async function sendOTPEmail(email, otp) {
+    const body = `
+        <p>Hello,</p>
+        <p>Thank you for registering with the SmartConnect Municipal Portal.</p>
+        <p>Your One-Time Password (OTP) for account verification is:</p>
+        <h2 style="font-size:28px;color:#1d4ed8;letter-spacing:4px;background:#e2e8f0;display:inline-block;padding:12px 24px;border-radius:8px;margin:16px 0;">${otp}</h2>
+        <p>This code is valid for 10 minutes. Please do not share it with anyone.</p>
+        <br><p style="color:#475569;">Regards,<br><strong>SmartConnect Operations Team</strong></p>`;
+    await sendHTMLEmail(email, '🔐 Your SmartConnect Verification Code', 'Your OTP for verification', body);
+}
+
 // ── Backward-compatible wrapper ───────────────────────────────
 async function sendNotification(email, subject, text) {
     await sendHTMLEmail(email, subject, subject, `<p>${text}</p>`);
 }
 
-module.exports = { sendNotification, sendTicketSubmittedEmail, sendStatusUpdateEmail, sendAdminActionEmail, sendSMS };
+module.exports = { sendNotification, sendTicketSubmittedEmail, sendStatusUpdateEmail, sendAdminActionEmail, sendSMS, sendOTPEmail };

@@ -54,8 +54,16 @@ const problemSchema = new mongoose.Schema({
     updated_at: { type: Date, default: Date.now }
 });
 
+const otpSchema = new mongoose.Schema({
+    email: { type: String, required: true, index: true },
+    otp: { type: String, required: true },
+    expiresAt: { type: Date, default: () => new Date(Date.now() + 10 * 60 * 1000) } // 10 minutes
+});
+otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
 const Citizen = mongoose.model('Citizen', citizenSchema);
 const Official = mongoose.model('Official', officialSchema);
 const Problem = mongoose.model('Problem', problemSchema);
+const Otp = mongoose.model('Otp', otpSchema);
 
-module.exports = { initDB, Citizen, Official, Problem };
+module.exports = { initDB, Citizen, Official, Problem, Otp };

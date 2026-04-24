@@ -195,4 +195,23 @@ router.put('/:id/admin-action', authenticateToken, async (req, res) => {
     }
 });
 
+router.delete('/:id', authenticateToken, async (req, res) => {
+    try {
+        const problem = await Problem.findOne({ id: req.params.id });
+        if (!problem) return res.status(404).json({ error: 'Ticket not found' });
+        
+        if (req.user.type === 'citizen' && problem.citizen_id !== req.user.id) {
+            return res.status(403).json({ error: 'You can only delete your own tickets' });
+        }
+        if (req.user.type === 'official') {
+            return res.status(403).json({ error: 'Officials cannot delete tickets' });
+        }
+
+        await Problem.deleteOne({ id: req.params.id });
+        res.json({ message: 'Ticket deleted' });
+    } catch (err) {
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
 module.exports = router;
